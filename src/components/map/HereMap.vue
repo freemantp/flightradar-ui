@@ -47,7 +47,7 @@
                             
             // Create an icon, an object holding the latitude and longitude, and a marker:
             var icon = new H.map.Icon(svgMarkup),
-                coords = {lat: this.lat, lng: this.lng},
+                coords = {lat: '46.94825', lng: '7.42429'},
                 marker = new H.map.Marker(coords, {icon: icon});
 
             this.map.addObject(marker);
