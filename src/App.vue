@@ -1,23 +1,25 @@
 <template>
   <div id="app">
     <div id="nav">
-      <router-link to="/">Live Radar</router-link> |
+      <router-link to="/">Live Radar</router-link>|
       <router-link to="/flightlog">Flight log</router-link>
     </div>
-    <router-view/>
-
-  </div>    
+    <router-view />
+  </div>
 </template>
 
 <script>
-    export default {
-        name: 'app'
-    }
+  import Vue from 'vue'
+
+  export default Vue.extend({
+    name: 'app'
+  });
+
 </script>
 
 <style>
 #app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
+  font-family: "Avenir", Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;

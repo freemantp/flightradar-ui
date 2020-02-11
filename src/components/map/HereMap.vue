@@ -1,7 +1,9 @@
 <template src="./hereMap.html"></template>
 
 <script>
-    export default {
+    import Vue from "vue";
+
+    export default Vue.extend({
         name: "HereMap",
         data() {
             return {
@@ -61,7 +63,7 @@
                 var baseLayer = this.map.getBaseLayer();
                 baseLayer.getProvider().setStyle(new H.map.Style('./radar-style.yml'));
         }
-    }
+    });
 </script>
 
 <style scoped></style>

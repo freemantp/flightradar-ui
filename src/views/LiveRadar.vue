@@ -1,5 +1,5 @@
 <template>
-    <HereMap apikey="INSERT_API_KEY_HERE"
+    <HereMap v-bind:apikey="apiKey"
             lat="46.9479"
             lng="7.4446"
             width="100%"
@@ -9,11 +9,15 @@
 <script>
 // @ is an alias to /src
 import HereMap from "../components/map/HereMap.vue"
+import {HERE_API_KEY} from '../config'
 
 export default {
   name: 'LiveRadar',
-    components: {
-      HereMap
-  },  
+  components: {HereMap},  
+  data() {
+    return {
+      apiKey: HERE_API_KEY
+    }
+  }
 }
 </script>
