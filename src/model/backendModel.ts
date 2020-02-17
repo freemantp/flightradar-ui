@@ -6,8 +6,9 @@ export interface Flight {
 }
 
 export interface Aircraft {
-    type: string;
-    icaoType: string;
-    reg: string;
-    operator: string;
+    icao24: string
+    type?: string;
+    icaoType?: string;
+    reg?: string;
+    op?: string;
 }
