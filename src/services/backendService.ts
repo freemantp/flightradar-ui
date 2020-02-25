@@ -10,8 +10,8 @@ export class FlightRadarService {
             password: API_PASSWORD
           }
     }
-    public async getFlights(): Promise<Array<Flight>>  {
-        const res = await axios.get(`${API_BASEPATH}/flights`, this.config);
+    public async getFlights(numEntries: number=10): Promise<Array<Flight>>  {
+        const res = await axios.get(`${API_BASEPATH}/flights?limit=${numEntries}`, this.config);
 
         if (this.is2xx(res))
             return res.data;

@@ -6,6 +6,8 @@ import { BootstrapVue, IconsPlugin } from 'bootstrap-vue'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue/dist/bootstrap-vue.css'
 
+import VueMoment from 'vue-moment'
+
 Vue.config.productionTip = false
 
 new Vue({
@@ -14,3 +16,5 @@ new Vue({
 }).$mount('#app')
 
 Vue.use(BootstrapVue)
+
+Vue.use(VueMoment);
