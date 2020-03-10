@@ -1,9 +1,9 @@
 <template>
   <div id="app">
-    <div id="nav">
+    <nav id="nav">
       <router-link to="/">Live Radar</router-link>|
       <router-link to="/flightlog">Flight log</router-link>
-    </div>
+    </nav>
     <router-view />
   </div>
 </template>
