@@ -28,6 +28,15 @@ export class FlightRadarService {
           throw res.statusText;        
     }
 
+    public async getLivePositions() {
+        const res = await axios.get(`${API_BASEPATH}/positions/live`, this.config);
+
+        if (this.is2xx(res))
+            return res.data;
+        else
+          throw res.statusText;        
+    }
+
 
     private is2xx(result: AxiosResponse<any>): boolean {
         return result.status >= 200 && result.status < 300;

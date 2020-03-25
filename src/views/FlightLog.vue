@@ -1,9 +1,8 @@
 <template>
   <div class="about">
 
-    <b-spinner v-if="!loaded" label="Spinning"></b-spinner>
+    <b-spinner v-if="flights.length == 0" label="Spinning"></b-spinner>
 
-  
     <FlightLogEntry v-for="flight in flights" :key="flight.id" 
                   v-bind:icao24='flight.icao24' 
                   v-bind:callsign='flight.cls' 
@@ -27,15 +26,23 @@
   export default class FlightLog extends Vue {
     
     flights: Array<Flight> = []
-    loaded: boolean = false;
+
+    async loadData() {
+      // TODO: use DI
+      const frService = new FlightRadarService();
+      this.flights = await frService.getFlights(30);
+    }
     
     async mounted() {
-      
-      const frService = new FlightRadarService();
-      this.flights = await frService.getFlights(20);
-      this.loaded = true;
 
-      console.log(`Fetched ${this.flights.length} flights` );
+      this.loadData();      
+
+
+      //TODO: stop update when navigating away
+      setInterval( () => {
+        console.log('delayed');
+         this.loadData();
+      }, 5000)
     }    
   }
 </script>
