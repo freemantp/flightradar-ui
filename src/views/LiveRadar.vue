@@ -6,18 +6,19 @@
             height="835px" />
 </template>
 
-<script>
+<script lang="ts">
 // @ is an alias to /src
+import Vue from "vue";
+import Component from 'vue-class-component';
+
 import HereMap from "../components/map/HereMap.vue"
 import {HERE_API_KEY} from '../config'
 
-export default {
-  name: 'LiveRadar',
-  components: {HereMap},  
-  data() {
-    return {
-      apiKey: HERE_API_KEY
-    }
-  }
+@Component({
+  components: {HereMap}
+})
+export default class LiveRadar extends Vue {
+  apiKey: string = HERE_API_KEY;
 }
+
 </script>

@@ -32,8 +32,8 @@
         }
     })
 
-  @Component
-  export default class FlightLogEntry extends FlightLogEntryProps {
+@Component
+export default class FlightLogEntry extends FlightLogEntryProps {
     
     aircraft: Aircraft = {
         icao24: this.icao24,
@@ -48,7 +48,7 @@
     get operatorTooltip(): string {
         let tooltipContent =  `<strong>ICAO 24-bit: </strong> ${this.icao24}`;
         if (this.aircraft.reg)
-             tooltipContent += `<br><strong>Registration:</strong> ${this.aircraft.reg}`
+            tooltipContent += `<br><strong>Registration:</strong> ${this.aircraft.reg}`
         return tooltipContent;
     }
 
@@ -83,10 +83,10 @@
     } 
     
     async mounted() {
-      const frService = new FlightRadarService();
-      this.aircraft = await frService.getAircraft(this.icao24);
+    const frService = new FlightRadarService();
+    this.aircraft = await frService.getAircraft(this.icao24);
     }    
-  }    
+}    
 </script>
 
 <style scoped>
