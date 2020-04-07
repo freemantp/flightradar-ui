@@ -1,22 +1,10 @@
 <template src="./hereMap.html"></template>
 
 <script lang="ts">
-    import Vue from "vue";
-    import Component from 'vue-class-component';
+    import { Vue, Component, Prop } from 'vue-property-decorator'
+    import { FlightRadarService } from '../../services/backendService'
 
     declare let H: any;
-
-    const HereMapProps = Vue.extend({
-        props: {
-            appId: String,
-            appCode: String,
-            lat: String,
-            lng: String,
-            width: String,
-            height: String,
-            apikey: String
-        }
-    })
 
     export interface Coordinates {
         lat: string;
@@ -24,13 +12,23 @@
     }
 
     @Component
-    export default class HereMap extends HereMapProps {
-    
+    export default class HereMap extends Vue {
+
+        @Prop(String) readonly appId!: string;
+        @Prop(String) readonly appCode!: string;
+        @Prop(String) readonly lat!: string;
+        @Prop(String) readonly lng!: string;
+        @Prop(String) readonly width!: string;
+        @Prop(String) readonly height!: string;
+        @Prop(String) readonly apikey!: string;
+        
         private platform: any;
         private map: any;
         private behavior: any;
-
+        private markers: Map<string, any> = new Map();
+        private frService = new FlightRadarService();
         public orangeIcon: any;
+        private intervalId?: number;
 
         public constructor() {
             super();
@@ -39,9 +37,9 @@
                 apikey: this.apikey
             });
 
-            const orangeDot = `<svg xmlns="http://www.w3.org/2000/svg" class="svg-icon" width="10px" height="10px">
-    <circle cx="5" cy="5" r="4" fill="rgb(250, 127, 0)" stroke-width="1" stroke="black" opacity="1"/>
-    </svg>`;
+            const orangeDot = `<svg xmlns="http://www.w3.org/2000/svg" class="svg-icon" width="20px" height="20px">
+                               <circle cx="10" cy="10" r="5" fill="rgb(250, 127, 0)" stroke-width="1" stroke="black" opacity="1"/>
+                               </svg>`;
 
             this.orangeIcon = new H.map.Icon(orangeDot);
         }
@@ -72,22 +70,44 @@
             let ui = H.ui.UI.createDefault(this.map, defaultLayers);
         }
 
-        private addMarker(coords: Coordinates, icon: any) {
+        private updateMarker(id: string, coords: Coordinates) {
+            if(this.markers.has(id)) {
+                let marker = this.markers.get(id);
+                marker.setGeometry(coords);
+            } else {
+                let marker = new H.map.Marker(coords, {icon: this.orangeIcon, data: id})
+                marker.addEventListener('tap', (event: any) => console.log(event.target.getData()));
+                this.map.addObject(marker);                
+                this.markers.set(id, marker);
+            }        
+        }
 
+        private async loadPositions() {
             
-            let marker = new H.map.Marker(coords, {icon: this.orangeIcon})
-            this.map.addObject(marker);
+            const positions = await this.frService.getLivePositions();
+
+            Object.keys(positions).forEach( (key) => {
+                let pos: Array<any> = positions[key];
+                this.updateMarker(pos[0], {lat: pos[1], lng: pos[2]} as Coordinates);
+            });
+            
         }
 
-        public mounted() {
+        public async mounted() {
 
-            this.initializeMap();
-
-            this.addMarker({lat: '46.94825', lng: '7.42429'} as Coordinates, this.orangeIcon);
-            this.addMarker({lat: '47.13166', lng: '7.23498'} as Coordinates, this.orangeIcon);            
-
+            this.initializeMap();    
             this.map.setCenter({lat: '46.94825', lng: '7.42429'});
+
+            //TODO: stop update when navigating away
+            this.intervalId = setInterval( () => {
+                this.loadPositions();
+            }, 1000)
         }
+
+        beforeDestroy () {
+            clearInterval(this.intervalId);
+        }
+
     }
 
 </script>

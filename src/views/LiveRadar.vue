@@ -8,7 +8,7 @@
 
 <script lang="ts">
 // @ is an alias to /src
-import Vue from "vue";
+import Vue from 'vue';
 import Component from 'vue-class-component';
 
 import HereMap from "../components/map/HereMap.vue"

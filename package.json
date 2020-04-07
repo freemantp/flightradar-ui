@@ -11,20 +11,20 @@
     "@types/vue-moment": "^4.0.0",
     "axios": "^0.19.2",
     "bootstrap": "^4.4.1",
-    "bootstrap-vue": "^2.6.1",
+    "bootstrap-vue": "^2.10.1",
     "core-js": "^3.6.4",
     "lodash": "^4.17.15",
     "vue": "^2.6.11",
     "vue-class-component": "^7.2.3",
     "vue-moment": "^4.1.0",
-    "vue-property-decorator": "^8.4.0",
+    "vue-property-decorator": "^8.4.1",
     "vue-router": "^3.1.6"
   },
   "devDependencies": {
-    "@vue/cli-plugin-babel": "^4.2.3",
-    "@vue/cli-plugin-router": "^4.2.3",
-    "@vue/cli-plugin-typescript": "^4.2.3",
-    "@vue/cli-service": "^4.2.3",
+    "@vue/cli-plugin-babel": "^4.3.1",
+    "@vue/cli-plugin-router": "^4.3.1",
+    "@vue/cli-plugin-typescript": "^4.3.1",
+    "@vue/cli-service": "^4.3.1",
     "typescript": "~3.5.3",
     "vue-template-compiler": "^2.6.10"
   }

@@ -13,7 +13,7 @@
 </template>
 
 <script lang="ts">
-  import Vue from "vue";
+  import Vue from 'vue';
   import Component from 'vue-class-component';
   import FlightLogEntry from '../components/flights/flightlogEntry.vue';
   import { FlightRadarService } from '../services/backendService';
@@ -25,7 +25,9 @@
   }})
   export default class FlightLog extends Vue {
     
-    flights: Array<Flight> = []
+    public flights: Array<Flight> = []
+
+    private intervalId?: number;
 
     async loadData() {
       // TODO: use DI
@@ -37,12 +39,14 @@
 
       this.loadData();      
 
-
       //TODO: stop update when navigating away
-      setInterval( () => {
-        console.log('delayed');
+      this.intervalId = setInterval( () => {
          this.loadData();
       }, 5000)
     }    
+
+    beforeDestroy () {
+      clearInterval(this.intervalId);
+    }
   }
 </script>
