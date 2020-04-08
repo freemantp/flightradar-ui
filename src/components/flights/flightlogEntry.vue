@@ -15,14 +15,13 @@
 </template>
 
 <script lang="ts">
-    import { Vue, Component, Prop } from 'vue-property-decorator'
+    import { Vue, Component, Prop, Inject } from 'vue-property-decorator'
     import {BIconCheckCircle, BIconQuestionSquareFill, BIconStarFill} from 'bootstrap-vue'
     import {Aircraft} from '../../model/backendModel';
-    import {FlightRadarService} from '@/services/backendService';
     import _ from 'lodash'
     import moment from 'moment';
+    import { FlightRadarService } from '@/services/flightradarService';
     Vue.prototype._ = _;
-
 
     @Component
     export default class FlightLogEntry extends Vue {
@@ -30,6 +29,8 @@
         @Prop(String) readonly icao24!: string;
         @Prop(String) readonly callsign!: string;
         @Prop(Date) readonly lastContact!: Date;
+
+        @Inject('radarService') readonly frService!: FlightRadarService
         
         aircraft: Aircraft = {
             icao24: this.icao24,
@@ -79,8 +80,12 @@
         } 
         
         async mounted() {
-        const frService = new FlightRadarService();
-        this.aircraft = await frService.getAircraft(this.icao24);
+            try {
+                this.aircraft = await this.frService.getAircraft(this.icao24);
+            } 
+            catch(err) {
+                console.error(`Could not obtain details for ${this.icao24}`);
+            }            
         }    
     }
 </script>

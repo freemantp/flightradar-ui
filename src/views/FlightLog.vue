@@ -16,9 +16,9 @@
   import Vue from 'vue';
   import Component from 'vue-class-component';
   import FlightLogEntry from '../components/flights/flightlogEntry.vue';
-  import { FlightRadarService } from '../services/backendService';
   import { Flight } from '../model/backendModel';
-  
+  import { Inject } from 'vue-property-decorator';
+  import { FlightRadarService } from '@/services/flightradarService';
 
   @Component({ components: {
     FlightLogEntry
@@ -29,17 +29,21 @@
 
     private intervalId?: number;
 
+    @Inject('radarService') readonly frService!: FlightRadarService
+
     async loadData() {
-      // TODO: use DI
-      const frService = new FlightRadarService();
-      this.flights = await frService.getFlights(30);
+      try {
+        this.flights = await this.frService.getFlights(30);
+      }
+      catch(err) {
+        console.error('Could not recent flights');
+      }      
     }
     
     async mounted() {
 
       this.loadData();      
 
-      //TODO: stop update when navigating away
       this.intervalId = setInterval( () => {
          this.loadData();
       }, 5000)

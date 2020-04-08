@@ -1,8 +1,8 @@
 <template src="./hereMap.html"></template>
 
 <script lang="ts">
-    import { Vue, Component, Prop } from 'vue-property-decorator'
-    import { FlightRadarService } from '../../services/backendService'
+    import { Vue, Component, Prop, Inject } from 'vue-property-decorator'
+import { FlightRadarService } from '@/services/flightradarService';
 
     declare let H: any;
 
@@ -21,12 +21,13 @@
         @Prop(String) readonly width!: string;
         @Prop(String) readonly height!: string;
         @Prop(String) readonly apikey!: string;
+
+        @Inject('radarService') readonly frService!: FlightRadarService
         
         private platform: any;
         private map: any;
         private behavior: any;
         private markers: Map<string, any> = new Map();
-        private frService = new FlightRadarService();
         public orangeIcon: any;
         private intervalId?: number;
 
