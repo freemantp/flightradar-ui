@@ -2,7 +2,7 @@
 <div class="flLogEntry">
 
     <div class="silhouette" v-b-tooltip.hover.html.left="{ variant: 'dark' }" :title="operatorTooltip">
-        <img :src="silhouetteUrl" v-if="silhouetteUrl" height="20px"/>
+        <img :src="silhouetteUrl(aircraft.icaoType)" v-if="silhouetteUrl(aircraft.icaoType)" height="20px"/>
         <b-icon-question-square-fill v-if="!silhouetteUrl" width="75px"></b-icon-question-square-fill>
     </div>                
     <div class="callsign" v-if="callsign"><span class="badge badge-secondary">{{callsign}}</span></div>
@@ -17,14 +17,19 @@
 <script lang="ts">
     import { Vue, Component, Prop, Inject } from 'vue-property-decorator'
     import {BIconCheckCircle, BIconQuestionSquareFill, BIconStarFill} from 'bootstrap-vue'
+    import { mixins } from 'vue-class-component'
+
     import {Aircraft} from '../../model/backendModel';
-    import _ from 'lodash'
+    import {AircraftIcon} from '../../mixins/aircraftIcon'
+    import {FlightRadarService} from '../../services/flightradarService';   
+    
     import moment from 'moment';
-    import { FlightRadarService } from '@/services/flightradarService';
+    
+    import _ from 'lodash'
     Vue.prototype._ = _;
 
     @Component
-    export default class FlightLogEntry extends Vue {
+    export default class FlightLogEntry extends mixins(AircraftIcon) {
 
         @Prop(String) readonly icao24!: string;
         @Prop(String) readonly callsign!: string;
@@ -35,12 +40,6 @@
         aircraft: Aircraft = {
             icao24: this.icao24,
         };
-        
-        get silhouetteUrl(): string|null {
-            return this.aircraft.icaoType ?        
-                `/silhouettes/${this.aircraft.icaoType.toLowerCase()}.png`:
-                null;
-        }
 
         get operatorTooltip(): string {
             let tooltipContent =  `<strong>ICAO 24-bit: </strong> ${this.icao24}`;

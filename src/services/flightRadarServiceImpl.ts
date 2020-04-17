@@ -20,6 +20,15 @@ export class FlightRadarServiceImpl implements FlightRadarService {
           throw res.statusText;        
     }
 
+    public async getFlight(id: string): Promise<Flight> {
+        const res = await axios.get(`${API_BASEPATH}/flights/${id}`, this.config);
+
+        if (this.is2xx(res))
+            return res.data;
+        else
+          throw res.statusText;        
+    }
+
     public async getAircraft(icaoHexAddr: string): Promise<Aircraft> {
         const res = await axios.get(`${API_BASEPATH}/aircraft/${icaoHexAddr}`, this.config);
 

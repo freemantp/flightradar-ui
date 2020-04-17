@@ -1,9 +1,11 @@
-<template src="./hereMap.html"></template>
+<template>
+     <div id="mapContainer" v-bind:style="{ width: width, height: height }"></div>
+</template>
 
 <script lang="ts">
-    import { Vue, Component, Prop, Inject } from 'vue-property-decorator'
-import { FlightRadarService } from '@/services/flightradarService';
-
+    import { Vue, Component, Prop, Inject, Emit } from 'vue-property-decorator'
+    import { FlightRadarService } from '@/services/flightradarService';
+    
     declare let H: any;
 
     export interface Coordinates {
@@ -23,6 +25,11 @@ import { FlightRadarService } from '@/services/flightradarService';
         @Prop(String) readonly apikey!: string;
 
         @Inject('radarService') readonly frService!: FlightRadarService
+
+        @Emit('on-marker-clicked')
+        emitFlightId(id: string): string {
+            return `${id}`;
+        }
         
         private platform: any;
         private map: any;
@@ -31,8 +38,7 @@ import { FlightRadarService } from '@/services/flightradarService';
         public orangeIcon: any;
         private intervalId?: number;
 
-        public constructor() {
-            super();
+        public created() {
 
             this.platform = new H.service.Platform({
                 apikey: this.apikey
@@ -77,7 +83,7 @@ import { FlightRadarService } from '@/services/flightradarService';
                 marker.setGeometry(coords);
             } else {
                 let marker = new H.map.Marker(coords, {icon: this.orangeIcon, data: id})
-                marker.addEventListener('tap', (event: any) => console.log(event.target.getData()));
+                marker.addEventListener('tap', (event: any) => this.emitFlightId(event.target.getData()));
                 this.map.addObject(marker);                
                 this.markers.set(id, marker);
             }        
@@ -87,9 +93,12 @@ import { FlightRadarService } from '@/services/flightradarService';
             
             const positions = await this.frService.getLivePositions();
 
+            // this.updateMarker('12356', {lat: '47.18074', lng: '7.41438'} as Coordinates);
+            // this.updateMarker('987654', {lat: '46.91235', lng: '7.49918'} as Coordinates);
+
             Object.keys(positions).forEach( (key) => {
                 let pos: Array<any> = positions[key];
-                this.updateMarker(pos[0], {lat: pos[1], lng: pos[2]} as Coordinates);
+                this.updateMarker(<string>pos[0], {lat: pos[1], lng: pos[2]} as Coordinates);
             });
             
         }
