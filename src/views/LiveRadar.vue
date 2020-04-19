@@ -3,7 +3,7 @@
     <b-sidebar id="sidebar-1" v-model='sidebarVisible' shadow>
       <flight-detail :flightID="selectedFlight"/>
     </b-sidebar>
-    <HereMap v-bind:apikey="apiKey"
+    <here-map v-bind:apikey="apiKey"
         lat="46.9479"
         lng="7.4446"
         width="100%"

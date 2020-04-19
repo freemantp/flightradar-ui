@@ -28,7 +28,7 @@
     import _ from 'lodash'
     Vue.prototype._ = _;
 
-    @Component
+    @Component({name: 'flight-log-entry'})
     export default class FlightLogEntry extends mixins(AircraftIcon) {
 
         @Prop(String) readonly icao24!: string;

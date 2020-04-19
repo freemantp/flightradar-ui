@@ -1,32 +1,32 @@
 <template>
-  <div v-if="flight && aircraft">
+  <div>
     <b-container>
       <b-row>
         <b-col>
-            <detail-field label="Callsign" :text="flight.cls"/>
+            <detail-field label="Callsign" :text="flight ? flight.cls : null"/>
         </b-col>            
         <b-col>
-            <detail-field label="Silhouette" :imageUrl="silhouetteUrl(aircraft.icaoType)"/>
+            <detail-field label="Silhouette" :imageUrl="silhouetteUrl(aircraft ? aircraft.icaoType: null)"/>
         </b-col>
       </b-row>        
       <b-row>
         <b-col>
-            <detail-field label="Registraton" :text="aircraft.reg"/>
+            <detail-field label="Registraton" :text="aircraft ? aircraft.reg: null"/>
         </b-col>
         <b-col>
-            <detail-field label="24 bit address" :text="aircraft.icao24"/>
+            <detail-field label="24 bit address" :text="aircraft ? aircraft.icao24 : null"/>
         </b-col>
       </b-row>        
       <b-row>
         <b-col>
-            <detail-field :label="typeLabel" :text="aircraft.type"/>
+            <detail-field :label="typeLabel" :text="aircraft ? aircraft.type : null"/>
         </b-col>
       </b-row>
       <b-row>
         <b-col>
-           <detail-field label="Operator" :text="aircraft.op"/>
+           <detail-field label="Operator" :text="aircraft ? aircraft.op : null"/>
         </b-col>
-      </b-row>
+      </b-row> 
     </b-container>
   </div>
 </template>
@@ -59,15 +59,19 @@ export default class FlightDetail extends mixins(AircraftIcon) {
 
   @Watch("flightID")
   async onFlightIdChanged(val: string, oldVal: string) {
+
+    this.flight = null;
+    this.aircraft = null;
+
     if (this.flightID) {
       this.flight = await this.frService.getFlight(this.flightID);
       this.aircraft = await this.frService.getAircraft(this.flight.icao24);
     }
   }
 
-    get typeLabel(): string {
-        return `Type (${this.aircraft!.icaoType})`;
-        }
+  get typeLabel(): string {
+    return `Type (${this.aircraft ? this.aircraft.icaoType : ''})`;
+  }
 
   @Inject("radarService") readonly frService!: FlightRadarService;
 }

@@ -13,7 +13,7 @@
         lng: string;
     }
 
-    @Component
+    @Component({name: 'here-map'})
     export default class HereMap extends Vue {
 
         @Prop(String) readonly appId!: string;
@@ -83,10 +83,14 @@
                 marker.setGeometry(coords);
             } else {
                 let marker = new H.map.Marker(coords, {icon: this.orangeIcon, data: id})
-                marker.addEventListener('tap', (event: any) => this.emitFlightId(event.target.getData()));
+                marker.addEventListener('tap', (event: any) => this.selectFlight(event.target.getData()));
                 this.map.addObject(marker);                
                 this.markers.set(id, marker);
             }        
+        }
+
+        private selectFlight(flightId: string): void {
+            this.emitFlightId(flightId);
         }
 
         private async loadPositions() {
@@ -99,8 +103,7 @@
             Object.keys(positions).forEach( (key) => {
                 let pos: Array<any> = positions[key];
                 this.updateMarker(<string>pos[0], {lat: pos[1], lng: pos[2]} as Coordinates);
-            });
-            
+            });            
         }
 
         public async mounted() {

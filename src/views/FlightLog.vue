@@ -3,7 +3,7 @@
 
     <b-spinner v-if="flights.length == 0" label="Spinning"></b-spinner>
 
-    <FlightLogEntry v-for="flight in flights" :key="flight.id" 
+    <flight-log-entry v-for="flight in flights" :key="flight.id" 
                   v-bind:icao24='flight.icao24' 
                   v-bind:callsign='flight.cls' 
                   v-bind:lastContact='new Date(flight.lstCntct)' 
