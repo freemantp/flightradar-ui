@@ -47,6 +47,15 @@ export class FlightRadarServiceImpl implements FlightRadarService {
           throw res.statusText; 
     }
 
+    public async getPositions(flightid: string) {
+        const res = await axios.get(`${API_BASEPATH}/flight/${flightid}/positions`, this.config);        
+
+        if (this.is2xx(res))
+            return res.data;
+        else
+          throw res.statusText; 
+    }
+
     private is2xx(result: AxiosResponse<any>): boolean {
         return result.status >= 200 && result.status < 300;
     }

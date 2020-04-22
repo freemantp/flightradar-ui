@@ -51,6 +51,7 @@ import DetailField from './detailField.vue'
     components: {DetailField}
 })
 export default class FlightDetail extends mixins(AircraftIcon) {
+
   @Prop(String) readonly flightID!: string;
 
   public flight: Flight | null = null;
@@ -68,7 +69,7 @@ export default class FlightDetail extends mixins(AircraftIcon) {
       this.aircraft = await this.frService.getAircraft(this.flight.icao24);
     }
   }
-
+  
   get typeLabel(): string {
     return `Type (${this.aircraft ? this.aircraft.icaoType : ''})`;
   }

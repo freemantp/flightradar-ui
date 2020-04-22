@@ -10,5 +10,7 @@ export interface FlightRadarService {
 
     getLivePositions(): any;
 
+    getPositions(flightId: string): any;
+
 
 }

@@ -3,7 +3,7 @@
 </template>
 
 <script lang="ts">
-    import { Vue, Component, Prop, Inject, Emit } from 'vue-property-decorator'
+    import { Vue, Component, Prop, Inject, Emit, Watch } from 'vue-property-decorator'
     import { FlightRadarService } from '@/services/flightradarService';
     
     declare let H: any;
@@ -23,20 +23,31 @@
         @Prop(String) readonly width!: string;
         @Prop(String) readonly height!: string;
         @Prop(String) readonly apikey!: string;
+        @Prop(Boolean) readonly pathVisible!: boolean;
 
         @Inject('radarService') readonly frService!: FlightRadarService
+
+        private platform: any;
+        private map: any;
+        private behavior: any;
+        private markers: Map<string, any> = new Map();
+        private orangeIcon: any;
+        private intervalId?: number;
+        private polyLine: any;
 
         @Emit('on-marker-clicked')
         emitFlightId(id: string): string {
             return `${id}`;
         }
-        
-        private platform: any;
-        private map: any;
-        private behavior: any;
-        private markers: Map<string, any> = new Map();
-        public orangeIcon: any;
-        private intervalId?: number;
+
+        @Watch("pathVisible")
+        async onPathVisibleChanged(val: string, oldVal: string) {    
+            if(!val) {
+                if(this.polyLine) {
+                    this.removeFlightPath();
+                }
+            }
+        }
 
         public created() {
 
@@ -90,15 +101,13 @@
         }
 
         private selectFlight(flightId: string): void {
-            this.emitFlightId(flightId);
+            this.addFlightPath(flightId);
+            this.emitFlightId(flightId);            
         }
 
         private async loadPositions() {
             
             const positions = await this.frService.getLivePositions();
-
-            // this.updateMarker('12356', {lat: '47.18074', lng: '7.41438'} as Coordinates);
-            // this.updateMarker('987654', {lat: '46.91235', lng: '7.49918'} as Coordinates);
 
             Object.keys(positions).forEach( (key) => {
                 let pos: Array<any> = positions[key];
@@ -115,6 +124,29 @@
             this.intervalId = setInterval( () => {
                 this.loadPositions();
             }, 1000)
+        }
+
+        private async addFlightPath(flightId: string) {
+
+            this.removeFlightPath();
+
+            const positions: any[] = await this.frService.getPositions(flightId)
+
+            var lineString = new H.geo.LineString();
+            positions[0].forEach( (values: number[]) => {
+                lineString.pushPoint({lat:values[0], lng:values[1]});
+            });
+
+            this.polyLine = this.map.addObject(new H.map.Polyline(
+                lineString, { style: { lineWidth: 2, strokeColor: 'red'}}
+            ));
+        }
+
+        private removeFlightPath(): void {
+            if(this.polyLine) {
+                this.map.removeObject(this.polyLine);
+                this.polyLine = null;
+            }
         }
 
         beforeDestroy () {

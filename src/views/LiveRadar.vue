@@ -9,19 +9,18 @@
         width="100%"
         height="835px" 
         v-on:on-marker-clicked="updateSidebar($event)"
+        :pathVisible="sidebarVisible"
         />
 </div>
  
 </template>
 
 <script lang="ts">
-// @ is an alias to /src
-import Vue from 'vue';
-import Component from 'vue-class-component';
+import { Vue, Component, Watch } from "vue-property-decorator";
 
-import HereMap from '../components/map/HereMap.vue' 
-import FlightDetail from '../components/flights/flightDetail.vue';
-import {HERE_API_KEY} from '../config'
+import HereMap from '@/components/map/HereMap.vue' 
+import FlightDetail from '@/components/flights/flightDetail.vue';
+import {HERE_API_KEY} from '@/config'
 
 @Component({
   components: {HereMap, FlightDetail}
