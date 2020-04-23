@@ -4,11 +4,12 @@
 
 <script lang="ts">
     import { Vue, Component, Prop, Inject, Emit, Watch } from 'vue-property-decorator'
-    import { FlightRadarService } from '@/services/flightradarService';
+    import { FlightRadarService, FlightAndPosition } from '@/services/flightradarService';
+    import { TerrestialPosition } from '@/model/backendModel';
     
     declare let H: any;
 
-    export interface Coordinates {
+    export interface HereCoordinates {
         lat: string;
         lng: string;
     }
@@ -71,7 +72,7 @@
             this.map = new H.Map(mapContainer,
                 defaultLayers.vector.normal.map,{
                 center: { lat: this.lat, lng: this.lng },
-                zoom: 9,
+                zoom: 8,
                 pixelRatio: window.devicePixelRatio || 1
             });        
             
@@ -88,7 +89,7 @@
             let ui = H.ui.UI.createDefault(this.map, defaultLayers);
         }
 
-        private updateMarker(id: string, coords: Coordinates) {
+        private updateMarker(id: string, coords: HereCoordinates) {
             if(this.markers.has(id)) {
                 let marker = this.markers.get(id);
                 marker.setGeometry(coords);
@@ -108,10 +109,9 @@
         private async loadPositions() {
             
             const positions = await this.frService.getLivePositions();
-
-            Object.keys(positions).forEach( (key) => {
-                let pos: Array<any> = positions[key];
-                this.updateMarker(<string>pos[0], {lat: pos[1], lng: pos[2]} as Coordinates);
+            
+            positions.forEach( (flPos, key) => {
+                this.updateMarker(String(flPos.id), {lat: String(flPos.pos.lat), lng: String(flPos.pos.lon)} as HereCoordinates);
             });            
         }
 
@@ -130,11 +130,11 @@
 
             this.removeFlightPath();
 
-            const positions: any[] = await this.frService.getPositions(flightId)
+            const positions: TerrestialPosition[] = await this.frService.getPositions(flightId);
 
             var lineString = new H.geo.LineString();
-            positions[0].forEach( (values: number[]) => {
-                lineString.pushPoint({lat:values[0], lng:values[1]});
+            positions.forEach( (pos: TerrestialPosition) => {
+                lineString.pushPoint({lat: pos.lat, lng:pos.lon});
             });
 
             this.polyLine = this.map.addObject(new H.map.Polyline(

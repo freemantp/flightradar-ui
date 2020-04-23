@@ -34,17 +34,15 @@
 <script lang="ts">
 import { Vue, Component, Prop, Inject, Watch } from "vue-property-decorator";
 import { mixins } from "vue-class-component";
-// import {BIconCheckCircle, BIconQuestionSquareFill, BIconStarFill} from 'bootstrap-vue'
-// import {Aircraft} from '../../model/backendModel';
 
-// import moment from 'moment';
 import { FlightRadarService } from "@/services/flightradarService";
-import { Flight, Aircraft } from "../../model/backendModel";
-import { AircraftIcon } from "../../mixins/aircraftIcon";
-import DetailField from './detailField.vue'
+import { Flight, Aircraft } from "@/model/backendModel";
+import { AircraftIcon } from "@/mixins/aircraftIcon";
+import DetailField from '@/components/flights/detailField.vue'
 
-// import _ from 'lodash'
-// Vue.prototype._ = _;
+import { LayoutPlugin } from 'bootstrap-vue'
+
+Vue.use(LayoutPlugin)
 
 @Component({
     name: 'flight-detail',

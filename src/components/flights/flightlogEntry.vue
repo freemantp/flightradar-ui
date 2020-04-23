@@ -19,9 +19,9 @@
     import {BIconCheckCircle, BIconQuestionSquareFill, BIconStarFill} from 'bootstrap-vue'
     import { mixins } from 'vue-class-component'
 
-    import {Aircraft} from '../../model/backendModel';
-    import {AircraftIcon} from '../../mixins/aircraftIcon'
-    import {FlightRadarService} from '../../services/flightradarService';   
+    import {Aircraft} from '@/model/backendModel';
+    import {AircraftIcon} from '@/mixins/aircraftIcon'
+    import {FlightRadarService} from '@/services/flightradarService';   
     
     import moment from 'moment';
     

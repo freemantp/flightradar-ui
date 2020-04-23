@@ -1,4 +1,9 @@
-import {Flight, Aircraft} from '../model/backendModel'
+import {Flight, Aircraft, TerrestialPosition} from '@/model/backendModel'
+
+export interface FlightAndPosition {
+    id: string;
+    pos: TerrestialPosition;
+}
 
 export interface FlightRadarService {
  
@@ -8,9 +13,9 @@ export interface FlightRadarService {
 
     getAircraft(icaoHexAddr: string): Promise<Aircraft>;
 
-    getLivePositions(): any;
+    getLivePositions(): Promise<Map<string,FlightAndPosition>>;
 
-    getPositions(flightId: string): any;
+    getPositions(flightId: string): Promise<Array<TerrestialPosition>>;
 
 
 }

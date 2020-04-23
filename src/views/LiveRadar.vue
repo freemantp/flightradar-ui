@@ -3,6 +3,7 @@
     <b-sidebar id="sidebar-1" v-model='sidebarVisible' shadow>
       <flight-detail :flightID="selectedFlight"/>
     </b-sidebar>
+
     <here-map v-bind:apikey="apiKey"
         lat="46.9479"
         lng="7.4446"
@@ -17,10 +18,13 @@
 
 <script lang="ts">
 import { Vue, Component, Watch } from "vue-property-decorator";
+import { BSidebar } from 'bootstrap-vue'
+import { HERE_API_KEY } from '@/config'
 
 import HereMap from '@/components/map/HereMap.vue' 
 import FlightDetail from '@/components/flights/flightDetail.vue';
-import {HERE_API_KEY} from '@/config'
+
+Vue.component('b-sidebar', BSidebar)
 
 @Component({
   components: {HereMap, FlightDetail}

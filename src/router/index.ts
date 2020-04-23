@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
-import LiveRadar from '../views/LiveRadar.vue'
+import LiveRadar from '@/views/LiveRadar.vue'
 
 Vue.use(VueRouter)
 
@@ -16,7 +16,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (*.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () => import('../views/FlightLog.vue')
+    component: () => import('@/views/FlightLog.vue')
   }
 ]
 

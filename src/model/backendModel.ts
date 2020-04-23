@@ -6,6 +6,12 @@ export interface Flight {
     lstCntct: Date
 }
 
+export interface TerrestialPosition {
+    lat: number;
+    lon: number;
+    alt?: number;
+}
+
 export interface Aircraft {
     icao24: string
     type?: string;

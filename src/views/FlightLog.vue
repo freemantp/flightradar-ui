@@ -15,8 +15,8 @@
 <script lang="ts">
   import Vue from 'vue';
   import Component from 'vue-class-component';
-  import FlightLogEntry from '../components/flights/flightlogEntry.vue';
-  import { Flight } from '../model/backendModel';
+  import FlightLogEntry from '@/components/flights/flightlogEntry.vue';
+  import { Flight } from '@/model/backendModel';
   import { Inject } from 'vue-property-decorator';
   import { FlightRadarService } from '@/services/flightradarService';
 
