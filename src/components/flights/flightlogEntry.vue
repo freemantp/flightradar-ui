@@ -21,7 +21,7 @@
 
     import {Aircraft} from '@/model/backendModel';
     import {AircraftIcon} from '@/mixins/aircraftIcon'
-    import {FlightRadarService} from '@/services/flightradarService';   
+    import {FlightRadarService} from '@/services/flightRadarService';   
     
     import moment from 'moment';
     

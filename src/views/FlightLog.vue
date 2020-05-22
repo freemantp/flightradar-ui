@@ -18,7 +18,7 @@
   import FlightLogEntry from '@/components/flights/flightlogEntry.vue';
   import { Flight } from '@/model/backendModel';
   import { Inject } from 'vue-property-decorator';
-  import { FlightRadarService } from '@/services/flightradarService';
+  import { FlightRadarService } from '@/services/flightRadarService';
 
   @Component({ components: {
     FlightLogEntry
@@ -27,7 +27,7 @@
     
     public flights: Array<Flight> = []
 
-    private intervalId?: number;
+    private intervalId?: NodeJS.Timeout
 
     @Inject('radarService') readonly frService!: FlightRadarService
 
@@ -50,7 +50,8 @@
     }    
 
     beforeDestroy () {
-      clearInterval(this.intervalId);
+      if(this.intervalId)
+        clearInterval(this.intervalId);
     }
   }
 </script>

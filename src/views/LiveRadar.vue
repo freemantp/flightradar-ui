@@ -19,7 +19,7 @@
 <script lang="ts">
 import { Vue, Component, Watch } from "vue-property-decorator";
 import { BSidebar } from 'bootstrap-vue'
-import { HERE_API_KEY } from '@/config'
+import { Configuration } from '@/config'
 
 import HereMap from '@/components/map/HereMap.vue' 
 import FlightDetail from '@/components/flights/flightDetail.vue';
@@ -30,7 +30,21 @@ Vue.component('b-sidebar', BSidebar)
   components: {HereMap, FlightDetail}
 })
 export default class LiveRadar extends Vue {
-  apiKey: string = HERE_API_KEY;
+
+  constructor() {
+    super();
+
+    let apiKey = Configuration.value('hereApiKey');
+
+    if(apiKey) {
+      this.apiKey = apiKey;
+    } else {
+      throw 'HERE API key not defined'
+    }
+  }
+
+
+  apiKey: string;
 
   sidebarVisible: boolean = false;
 

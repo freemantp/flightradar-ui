@@ -35,7 +35,7 @@
 import { Vue, Component, Prop, Inject, Watch } from "vue-property-decorator";
 import { mixins } from "vue-class-component";
 
-import { FlightRadarService } from "@/services/flightradarService";
+import { FlightRadarService } from "@/services/flightRadarService";
 import { Flight, Aircraft } from "@/model/backendModel";
 import { AircraftIcon } from "@/mixins/aircraftIcon";
 import DetailField from '@/components/flights/detailField.vue'

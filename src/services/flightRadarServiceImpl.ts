@@ -1,25 +1,34 @@
 import axios, { AxiosResponse, AxiosRequestConfig } from 'axios'
 import {Flight, Aircraft, TerrestialPosition} from '@/model/backendModel'
-import {API_BASEPATH, API_PASSWORD, API_USERNAME} from '@/config'
-import {FlightRadarService, FlightAndPosition}  from './flightradarService';
+import {Configuration} from '@/config'
+import {FlightRadarService, FlightAndPosition}  from './flightRadarService';
 
 import _ from 'lodash'
 
 export class FlightRadarServiceImpl implements FlightRadarService {
 
     private config: AxiosRequestConfig; 
+    private apiBasepath: string;
 
     constructor() {        
-        this.config = API_USERNAME ? {
+        this.config = Configuration.value('flightApiUser') ? {
             auth: {
-                username: API_USERNAME,
-                password: API_PASSWORD
-            }
-        } : { }
+                username: Configuration.value('flightApiUser'),
+                password: Configuration.value('flightApiPassword')
+            } 
+        } as AxiosRequestConfig : { }
+
+       let basePath = Configuration.value('flightApiUrl');
+
+        if(basePath) {
+            this.apiBasepath = basePath;
+        } else {
+            throw 'Flight API URL not defined';
+        }        
     } 
 
     public async getFlights(numEntries: number=10): Promise<Array<Flight>> {
-        const res = await axios.get(`${API_BASEPATH}/flights?limit=${numEntries}`, this.config);
+        const res = await axios.get(`${this.apiBasepath}/flights?limit=${numEntries}`, this.config);
 
         if (this.is2xx(res))
             return res.data;
@@ -28,7 +37,7 @@ export class FlightRadarServiceImpl implements FlightRadarService {
     }
 
     public async getFlight(id: string): Promise<Flight> {
-        const res = await axios.get(`${API_BASEPATH}/flights/${id}`, this.config);
+        const res = await axios.get(`${this.apiBasepath}/flights/${id}`, this.config);
 
         if (this.is2xx(res))
             return res.data;
@@ -37,7 +46,7 @@ export class FlightRadarServiceImpl implements FlightRadarService {
     }
 
     public async getAircraft(icaoHexAddr: string): Promise<Aircraft> {
-        const res = await axios.get(`${API_BASEPATH}/aircraft/${icaoHexAddr}`, this.config);
+        const res = await axios.get(`${this.apiBasepath}/aircraft/${icaoHexAddr}`, this.config);
 
         if (this.is2xx(res))
             return res.data;
@@ -46,7 +55,7 @@ export class FlightRadarServiceImpl implements FlightRadarService {
     }
 
     public async getLivePositions(): Promise<Map<string,FlightAndPosition>>  {
-        return axios.get(`${API_BASEPATH}/positions/live`, this.config)
+        return axios.get(`${this.apiBasepath}/positions/live`, this.config)
             .then((res: AxiosResponse<Map<string,Array<number>>>) => {
                 if (this.is2xx(res)) {
                     let vals: object = _.mapValues(res.data, (arr: any[]) => {
@@ -65,7 +74,7 @@ export class FlightRadarServiceImpl implements FlightRadarService {
 
     public async getPositions(flightid: string): Promise<Array<TerrestialPosition>> {
 
-        return axios.get(`${API_BASEPATH}/flights/${flightid}/positions`, this.config)
+        return axios.get(`${this.apiBasepath}/flights/${flightid}/positions`, this.config)
              .then((res: AxiosResponse<Array<Array<Array<number>>>>) => {
                  
                 if (this.is2xx(res)) {

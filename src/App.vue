@@ -10,12 +10,12 @@
 
 <script lang="ts">
   import { Vue, Component, Prop, Provide } from 'vue-property-decorator'
-  import { FlightRadarService} from '@/services/flightradarService'
+  import { FlightRadarService} from '@/services/flightRadarService'
   import { FlightRadarServiceImpl} from '@/services/flightRadarServiceImpl'
 
   @Component
   export default class FlightRadarNg extends Vue {
-    @Provide() radarService: FlightRadarService = new FlightRadarServiceMock();
+    @Provide() radarService: FlightRadarService = new FlightRadarServiceImpl();
   }
 
 </script>

@@ -4,7 +4,7 @@
 
 <script lang="ts">
     import { Vue, Component, Prop, Inject, Emit, Watch } from 'vue-property-decorator'
-    import { FlightRadarService, FlightAndPosition } from '@/services/flightradarService';
+    import { FlightRadarService, FlightAndPosition } from '@/services/flightRadarService';
     import { TerrestialPosition } from '@/model/backendModel';
     
     declare let H: any;
@@ -33,7 +33,7 @@
         private behavior: any;
         private markers: Map<string, any> = new Map();
         private orangeIcon: any;
-        private intervalId?: number;
+        private intervalId?: NodeJS.Timeout;
         private polyLine: any;
 
         @Emit('on-marker-clicked')
@@ -150,7 +150,8 @@
         }
 
         beforeDestroy () {
-            clearInterval(this.intervalId);
+            if(this.intervalId)
+                clearInterval(this.intervalId);
         }
 
     }
