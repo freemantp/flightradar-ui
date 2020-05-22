@@ -1,18 +1,23 @@
 import axios, { AxiosResponse, AxiosRequestConfig } from 'axios'
 import {Flight, Aircraft, TerrestialPosition} from '@/model/backendModel'
-import {API_BASEPATH,API_PASSWORD, API_USERNAME} from '@/config'
+import {API_BASEPATH, API_PASSWORD, API_USERNAME} from '@/config'
 import {FlightRadarService, FlightAndPosition}  from './flightradarService';
 
 import _ from 'lodash'
 
 export class FlightRadarServiceImpl implements FlightRadarService {
 
-    private config: AxiosRequestConfig = {
-        auth: {
-            username: API_USERNAME,
-            password: API_PASSWORD
-          }
-    }
+    private config: AxiosRequestConfig; 
+
+    constructor() {        
+        this.config = API_USERNAME ? {
+            auth: {
+                username: API_USERNAME,
+                password: API_PASSWORD
+            }
+        } : { }
+    } 
+
     public async getFlights(numEntries: number=10): Promise<Array<Flight>> {
         const res = await axios.get(`${API_BASEPATH}/flights?limit=${numEntries}`, this.config);
 
@@ -60,7 +65,7 @@ export class FlightRadarServiceImpl implements FlightRadarService {
 
     public async getPositions(flightid: string): Promise<Array<TerrestialPosition>> {
 
-        return axios.get(`${API_BASEPATH}/flight/${flightid}/positions`, this.config)
+        return axios.get(`${API_BASEPATH}/flights/${flightid}/positions`, this.config)
              .then((res: AxiosResponse<Array<Array<Array<number>>>>) => {
                  
                 if (this.is2xx(res)) {
