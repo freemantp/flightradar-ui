@@ -12,10 +12,14 @@
   import { Vue, Component, Prop, Provide } from 'vue-property-decorator'
   import { FlightRadarService} from '@/services/flightRadarService'
   import { FlightRadarServiceImpl} from '@/services/flightRadarServiceImpl'
-
+  import { FlightRadarServiceMock } from './services/flightRadarServiceMock';
+  import { Configuration } from '@/config'
+  
   @Component
   export default class FlightRadarNg extends Vue {
-    @Provide() radarService: FlightRadarService = new FlightRadarServiceImpl();
+    @Provide() radarService: FlightRadarService = Configuration.isMockData()
+      ? new FlightRadarServiceMock() 
+      : new FlightRadarServiceImpl();
   }
 
 </script>

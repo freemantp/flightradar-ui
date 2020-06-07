@@ -10,8 +10,8 @@
     declare let H: any;
 
     export interface HereCoordinates {
-        lat: string;
-        lng: string;
+        lat: number;
+        lng: number;
     }
 
     @Component({name: 'here-map'})
@@ -56,11 +56,11 @@
                 apikey: this.apikey
             });
 
-            const orangeDot = `<svg xmlns="http://www.w3.org/2000/svg" class="svg-icon" width="20px" height="20px">
-                               <circle cx="10" cy="10" r="5" fill="rgb(250, 127, 0)" stroke-width="1" stroke="black" opacity="1"/>
+            const orangeDot = `<svg xmlns="http://www.w3.org/2000/svg" class="svg-icon" width="10px" height="10px">
+                               <circle cx="5" cy="5" r="4" fill="rgb(250, 127, 0)" stroke-width="1" stroke="black" opacity="1"/>
                                </svg>`;
 
-            this.orangeIcon = new H.map.Icon(orangeDot);
+            this.orangeIcon = new H.map.Icon(orangeDot, {anchor: {x: 5, y: 5}});
         }
 
         private initializeMap(): void {
@@ -111,7 +111,7 @@
             const positions = await this.frService.getLivePositions();
             
             positions.forEach( (flPos, key) => {
-                this.updateMarker(String(flPos.id), {lat: String(flPos.pos.lat), lng: String(flPos.pos.lon)} as HereCoordinates);
+                this.updateMarker(String(flPos.id), {lat: Number(flPos.pos.lat), lng: Number(flPos.pos.lon)} as HereCoordinates);
             });            
         }
 

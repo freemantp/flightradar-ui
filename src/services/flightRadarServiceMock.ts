@@ -6,8 +6,8 @@ export class FlightRadarServiceMock implements FlightRadarService {
 
     private pos: TerrestialPosition[] = [
         {lat: 47.02075, lon: 7.33998},
-        {lat: 46.96185, lon: 7.44290},
-        {lat: 46.91490, lon: 7.49620}
+        {lat: 46.81814, lon: 7.34101},
+        {lat: 46.915023, lon: 7.496388}
     ]
 
     getFlights(numEntries: number): Promise<Flight[]> {

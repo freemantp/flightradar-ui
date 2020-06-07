@@ -9,11 +9,23 @@ export class Configuration {
         'flightApiUrl':         '$VUE_APP_FLIGHT_API_URL',
         'flightApiUser':        '$VUE_APP_FLIGHT_API_USERNAME',
         'flightApiPassword':    '$VUE_APP_FLIGHT_API_PASSWORD',
-        'hereApiKey':           '$VUE_APP_HERE_API_KEY'
+        'hereApiKey':           '$VUE_APP_HERE_API_KEY',
+        'mockData' :            '$VUE_APP_MOCK_DATA'
         })); 
   }
 
-  static value (name: string): string | undefined {
+  static isMockData(): boolean {
+
+    let isMock: string|undefined = this.value('mockData');
+
+    if(isMock) {
+      return isMock == "true";
+    }
+
+    return false;
+  }
+
+  static value(name: string): string | undefined {
 
     if (!(Configuration.CONFIG.has(name))) {
       console.log(`Configuration: There is no key named "${name}"`)
