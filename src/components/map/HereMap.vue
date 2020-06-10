@@ -6,6 +6,9 @@
     import { Vue, Component, Prop, Inject, Emit, Watch } from 'vue-property-decorator'
     import { FlightRadarService, FlightAndPosition } from '@/services/flightRadarService';
     import { TerrestialPosition } from '@/model/backendModel';
+
+    import _ from 'lodash'
+    Vue.prototype._ = _;
     
     declare let H: any;
 
@@ -35,6 +38,7 @@
         private orangeIcon: any;
         private intervalId?: NodeJS.Timeout;
         private polyLine: any;
+        private selectedFlightId: string|null = null;
 
         @Emit('on-marker-clicked')
         emitFlightId(id: string): string {
@@ -43,11 +47,14 @@
 
         @Watch("pathVisible")
         async onPathVisibleChanged(val: string, oldVal: string) {    
-            if(!val) {
-                if(this.polyLine) {
-                    this.removeFlightPath();
-                }
+            if(!val) {           
+                this.unselectFlight();                
             }
+        }
+
+        private unselectFlight() {
+            this.selectedFlightId = null;
+            this.removeFlightPath();
         }
 
         public created() {
@@ -56,11 +63,12 @@
                 apikey: this.apikey
             });
 
-            const orangeDot = `<svg xmlns="http://www.w3.org/2000/svg" class="svg-icon" width="10px" height="10px">
+            const orangeDot2 = `<svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px">
                                <circle cx="5" cy="5" r="4" fill="rgb(250, 127, 0)" stroke-width="1" stroke="black" opacity="1"/>
                                </svg>`;
 
-            this.orangeIcon = new H.map.Icon(orangeDot, {anchor: {x: 5, y: 5}});
+
+            this.orangeIcon = new H.map.Icon(orangeDot2, {anchor: {x: 5, y: 5}});
         }
 
         private initializeMap(): void {
@@ -95,13 +103,14 @@
                 marker.setGeometry(coords);
             } else {
                 let marker = new H.map.Marker(coords, {icon: this.orangeIcon, data: id})
-                marker.addEventListener('tap', (event: any) => this.selectFlight(event.target.getData()));
+                marker.addEventListener('pointerdown', (event: any) => this.selectFlight(event.target.getData()));
                 this.map.addObject(marker);                
                 this.markers.set(id, marker);
             }        
         }
 
         private selectFlight(flightId: string): void {
+            this.selectedFlightId = flightId;
             this.addFlightPath(flightId);
             this.emitFlightId(flightId);            
         }
@@ -123,6 +132,9 @@
             //TODO: stop update when navigating away
             this.intervalId = setInterval( () => {
                 this.loadPositions();
+                if(this.selectedFlightId) {
+                    this.updateFlightPath(this.selectedFlightId);
+                }
             }, 1000)
         }
 
@@ -140,6 +152,31 @@
             this.polyLine = this.map.addObject(new H.map.Polyline(
                 lineString, { style: { lineWidth: 2, strokeColor: 'red'}}
             ));
+        }
+
+        private async updateFlightPath(flightId: string) {
+
+            if(this.polyLine) {
+
+                
+                let lineString = this.polyLine.getGeometry();
+
+                if(lineString) {
+
+                    const positions: TerrestialPosition[] = await this.frService.getPositions(flightId);
+
+                    if(positions.length > lineString.getPointCount()) {
+                        // TODO Check whether position is not equivalent to last point in line string
+                        _.forEach(_.slice(positions, lineString.getPointCount()), (pos: TerrestialPosition)  => {
+                            lineString.pushPoint({lat: pos.lat, lng:pos.lon});
+                        })
+
+                        this.polyLine.setGeometry(lineString);
+                    }
+                }
+
+                
+            }
         }
 
         private removeFlightPath(): void {
