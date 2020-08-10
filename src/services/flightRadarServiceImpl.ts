@@ -58,10 +58,10 @@ export class FlightRadarServiceImpl implements FlightRadarService {
         return axios.get(`${this.apiBasepath}/positions/live`, this.config)
             .then((res: AxiosResponse<Map<string,Array<number>>>) => {
                 if (this.is2xx(res)) {
-                    let vals: object = _.mapValues(res.data, (arr: any[]) => {
+                    let vals: object = _.mapValues(res.data, (arr: any[], key: string) => {
                         return {
-                            id: arr[0],
-                            pos: {lat: arr[1], lon: arr[2], alt: arr[3]} as TerrestialPosition
+                            id: key,
+                            pos: {lat: arr[0], lon: arr[1], alt: arr[2], track: arr[3]} as TerrestialPosition
 
                         } as FlightAndPosition;                            
                     });

@@ -10,6 +10,7 @@ export interface TerrestialPosition {
     lat: number;
     lon: number;
     alt?: number;
+    track?: number;
 }
 
 export interface Aircraft {
