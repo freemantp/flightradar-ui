@@ -59,11 +59,16 @@ export class FlightRadarServiceImpl implements FlightRadarService {
             .then((res: AxiosResponse<Map<string,Array<number>>>) => {
                 if (this.is2xx(res)) {
                     let vals: object = _.mapValues(res.data, (arr: any[], key: string) => {
+
                         return {
                             id: key,
-                            pos: {lat: arr[0], lon: arr[1], alt: arr[2], track: arr[3]} as TerrestialPosition
-
-                        } as FlightAndPosition;                            
+                            pos: {
+                                lat: arr[0], 
+                                lon: arr[1], 
+                                alt: arr[2], 
+                                track: _.isNull(arr[3]) ? null : _.round(arr[3])
+                            } as TerrestialPosition
+                        } as FlightAndPosition;                    
                     });
                     return new Map(Object.entries(vals));
                 }
