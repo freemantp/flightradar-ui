@@ -8,6 +8,8 @@
     import { TerrestialPosition } from '@/model/backendModel';
 
     import _ from 'lodash'
+    import moment from 'moment';
+
     Vue.prototype._ = _;
     
     declare let H: any;
@@ -33,12 +35,15 @@
         private platform: any;
         private map: any;
         private behavior: any;
-        private markers: Map<string, any> = new Map();
-        private iconSvgMap: Map<string, any> = new Map();
+        
         private aircraftIcon: any;
         private intervalId?: NodeJS.Timeout;
         private polyLine: any;
         private selectedFlightId: string|null = null;
+
+        private markers: Map<string, any> = new Map();
+        private lastUpdate: Map<string, Date> = new Map();
+        private iconSvgMap: Map<string, any> = new Map();
 
         private static readonly INACTIVE_COLOR = "250, 255, 255";
         private static readonly HIGHLIGHT_COLOR = "250, 127, 0";
@@ -71,7 +76,6 @@
 
             // set the anchor using margin css property depending on the content's (svg element below) size
             // to make sure that the icon's center represents the marker's geo positon
-            //aircraftDomIconElement.style.margin = '-10px 0 0 -10px';
             aircraftDomIconElement.style.margin = '-12px 0 0 -5px';
 
             aircraftDomIconElement.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="15px" height="20px">
@@ -126,12 +130,16 @@
 
         private updateMarker(id: string, coords: HereCoordinates) {
             if(this.markers.has(id)) {
+
                 let marker = this.markers.get(id);
                 marker.setGeometry(coords);
 
+                //TODO: if heading is not available, get it from last points of flight path
                 if(this.iconSvgMap.has(id) && coords.heading != null) {                    
                     this.iconSvgMap.get(id).style.transform = 'rotate('+ coords.heading +'deg)';
                 }
+
+                this.lastUpdate.set(id, moment().toDate())
 
             } else {
 
@@ -149,7 +157,7 @@
         }
 
         private selectFlight(flightId: string): void {
-
+            console.log(`selected flight: ${flightId}`)
             this.resetIcon();
             this.setMarkerColor(flightId, HereMap.HIGHLIGHT_COLOR);
 
@@ -173,9 +181,26 @@
                 return Math.floor(Math.random() * (max - min + 1)) + min;
             }
             
+            this.updateAircraft(positions);
+        }
+
+        private updateAircraft(positions: Map<string,FlightAndPosition>) {
             positions.forEach( (flPos, key) => {
                 this.updateMarker(String(flPos.id), {lat: Number(flPos.pos.lat), lng: Number(flPos.pos.lon), heading: flPos.pos.track} as HereCoordinates);
-            });            
+            });
+
+            const now = moment();
+
+            for (let [key, value] of this.lastUpdate) {
+                let currentTimestamp = moment(value as unknown as Date);
+                if(now.diff(currentTimestamp,'seconds') > 15) {
+                    
+                    this.removeMarker(key);                    
+                    this.lastUpdate.delete(key);                    
+                }
+            }
+
+            // Purge stale markers
         }
 
         public async mounted() {
@@ -198,14 +223,19 @@
 
             const positions: TerrestialPosition[] = await this.frService.getPositions(flightId);
 
-            var lineString = new H.geo.LineString();
-            positions.forEach( (pos: TerrestialPosition) => {
-                lineString.pushPoint({lat: pos.lat, lng:pos.lon});
-            });
+            if(positions.length > 1) {
 
-            this.polyLine = this.map.addObject(new H.map.Polyline(
-                lineString, { style: { lineWidth: 2, strokeColor: 'red'}}
-            ));
+                var lineString = new H.geo.LineString();
+                positions.forEach( (pos: TerrestialPosition) => {
+                    lineString.pushPoint({lat: pos.lat, lng:pos.lon});
+                });
+
+                this.polyLine = this.map.addObject(new H.map.Polyline(
+                    lineString, { style: { lineWidth: 2, strokeColor: 'red'}}
+                ));
+            } else {
+                console.warn(`Not enough positions (${positions.length}) for flight ${flightId}`)
+            }
         }
 
         private async updateFlightPath(flightId: string) {
@@ -218,22 +248,42 @@
 
                     const positions: TerrestialPosition[] = await this.frService.getPositions(flightId);
 
-                    if(positions.length > lineString.getPointCount()) {
+                    if(positions.length > 1 && positions.length > lineString.getPointCount()) {
                         // TODO Check whether position is not equivalent to last point in line string
                         _.forEach(_.slice(positions, lineString.getPointCount()), (pos: TerrestialPosition)  => {
                             lineString.pushPoint({lat: pos.lat, lng:pos.lon});
                         })
 
-                        this.polyLine.setGeometry(lineString);
+                        if(this.polyLine) 
+                            this.polyLine.setGeometry(lineString);
                     }
                 }                
-            }
+            } 
         }
 
         private removeFlightPath(): void {
             if(this.polyLine) {
+                console.log("removeFlightPath")
                 this.map.removeObject(this.polyLine);
                 this.polyLine = null;
+            }
+        }
+
+        private removeMarker(id: string): void {
+
+            let marker = this.markers.get(id);
+
+            if(marker) { 
+                
+                if(this.selectedFlightId === id) {
+                    this.unselectFlight();
+                }
+
+                this.map.removeObject(marker);
+                this.markers.delete(id);
+                this.iconSvgMap.delete(id);
+
+                console.log("deleted flight: " + id);
             }
         }
 
