@@ -4,7 +4,7 @@ import LiveRadar from '@/views/LiveRadar.vue'
 
 Vue.use(VueRouter)
 
-const routes = [
+const routesDecriptor = [
   {
     path: '/',
     name: 'LiveRadar',
@@ -21,7 +21,8 @@ const routes = [
 ]
 
 const router = new VueRouter({
-  routes
+  mode: 'history',
+  routes: routesDecriptor
 })
 
 export default router
