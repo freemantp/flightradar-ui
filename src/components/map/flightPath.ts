@@ -63,7 +63,7 @@ export class FlightPath {
 
     public removeFlightPath(): void {
         if(this.polyLine) {
-            console.log("removeFlightPath")
+            console.log("removeFlightPath: " + this.flightId)
             this.map.removeObject(this.polyLine);
             this.polyLine = null;
         }

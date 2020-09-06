@@ -5,11 +5,13 @@
         <img :src="silhouetteUrl(aircraft.icaoType)" v-if="silhouetteUrl(aircraft.icaoType)" height="20px"/>
         <b-icon-question-square-fill v-if="!silhouetteUrl" width="75px"></b-icon-question-square-fill>
     </div>                
-    <div class="callsign" v-if="callsign"><span class="badge badge-secondary">{{callsign}}</span></div>
+    <div class="callsign" v-if="flight.cls"><span class="badge badge-secondary">{{flight.cls}}</span></div>
     <div class="aircraftType">{{aircaftTypeTruncated}}</div>
     <div class="operator">{{aircaftOperatorTruncated}}</div>
-    <b-icon-check-circle v-if="!isLive" v-b-tooltip.hover.right :title="timestampTooltip" class="liveStatus"></b-icon-check-circle>
-    <b-icon-star-fill v-if="isLive" v-b-tooltip.hover.right :title="timestampTooltip" class="liveStatus"></b-icon-star-fill>
+    <router-link :to="{ name: 'flightview', params: { flightId: flight.id }}">
+        <b-icon-check-circle v-if="!isLive" v-b-tooltip.hover.right :title="timestampTooltip" class="liveStatus"></b-icon-check-circle>
+        <b-icon-star-fill v-if="isLive" v-b-tooltip.hover.right :title="timestampTooltip" class="liveStatus"></b-icon-star-fill>
+    </router-link>
     
 </div>
 </template>
@@ -19,7 +21,7 @@
     import {BIconCheckCircle, BIconQuestionSquareFill, BIconStarFill} from 'bootstrap-vue'
     import { mixins } from 'vue-class-component'
 
-    import {Aircraft} from '@/model/backendModel';
+    import {Aircraft, Flight} from '@/model/backendModel';
     import {AircraftIcon} from '@/mixins/aircraftIcon'
     import {FlightRadarService} from '@/services/flightRadarService';   
     
@@ -31,18 +33,17 @@
     @Component({name: 'flight-log-entry'})
     export default class FlightLogEntry extends mixins(AircraftIcon) {
 
-        @Prop(String) readonly icao24!: string;
-        @Prop(String) readonly callsign!: string;
+        @Prop() readonly flight!: Flight;
         @Prop(Date) readonly lastContact!: Date;
 
         @Inject('radarService') readonly frService!: FlightRadarService
         
         aircraft: Aircraft = {
-            icao24: this.icao24,
+            icao24: this.flight.icao24,
         };
 
         get operatorTooltip(): string {
-            let tooltipContent =  `<strong>ICAO 24-bit: </strong> ${this.icao24}`;
+            let tooltipContent =  `<strong>ICAO 24-bit: </strong> ${this.flight.icao24}`;
             if (this.aircraft.reg)
                 tooltipContent += `<br><strong>Registration:</strong> ${this.aircraft.reg}`
             return tooltipContent;
@@ -80,10 +81,10 @@
         
         async mounted() {
             try {
-                this.aircraft = await this.frService.getAircraft(this.icao24);
+                this.aircraft = await this.frService.getAircraft(this.flight.icao24);
             } 
             catch(err) {
-                console.error(`Could not obtain details for ${this.icao24}`);
+                console.error(`Could not obtain details for ${this.flight.icao24}`);
             }            
         }    
     }

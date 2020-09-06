@@ -1,27 +1,33 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 import LiveRadar from '@/views/LiveRadar.vue'
+import FlightView from '@/views/FlightView.vue'
 
 Vue.use(VueRouter)
 
 const routesDecriptor = [
   {
     path: '/',
-    name: 'LiveRadar',
+    name: 'home',
     component: LiveRadar
   },
   {
-    path: '/flightlog',
-    name: 'FlightLog',
+    path: '/flightlog', 
+    name: 'flightlog',
     // route level code-splitting
     // this generates a separate chunk (*.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
     component: () => import('@/views/FlightLog.vue')
+  },
+  {
+    path: '/flight/:flightId',
+    name: 'flightview',
+    component: FlightView
   }
 ]
 
 const router = new VueRouter({
-  mode: 'history',
+  //mode: 'history',
   routes: routesDecriptor
 })
 

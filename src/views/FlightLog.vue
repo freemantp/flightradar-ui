@@ -5,6 +5,7 @@
 
     <flight-log-entry v-for="flight in flights" :key="flight.id" 
                   v-bind:icao24='flight.icao24' 
+                  v-bind:flight='flight'
                   v-bind:callsign='flight.cls' 
                   v-bind:lastContact='new Date(flight.lstCntct)' 
                   class="mx-auto"

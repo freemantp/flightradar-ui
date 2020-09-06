@@ -25,6 +25,8 @@
         @Prop(String) readonly height!: string;
         @Prop(String) readonly apikey!: string;
         @Prop(Boolean) readonly pathVisible!: boolean;
+        @Prop(Boolean) readonly liveMode!: boolean;
+        @Prop(String) readonly flightId!: string;
 
         @Inject('radarService') readonly frService!: FlightRadarService
 
@@ -51,10 +53,16 @@
             }
         }
 
+        @Watch("flightId")
+        async onflightIdChanged(val: string, oldVal: string) {    
+           this.selectFlight(this.flightId);
+        }
+
         private unselectFlight() {
             this.resetIcon();
-            console.log('unselectFlight')
+            
             if(this.selectedFlight) {
+                console.log('unselectFlight:' + this.selectedFlight.flightId)
                 this.selectedFlight.removeFlightPath();
                 this.selectedFlight = null;
             }            
@@ -108,15 +116,18 @@
         }
 
         private resetIcon() {
-            if(this.selectedFlight) {        
-                this.markers.get(this.selectedFlight.flightId)!.setColor(AircraftIcon.INACTIVE_COLOR)
+            if(this.selectedFlight && this.markers. has(this.selectedFlight.flightId)) {        
+                this.markers.get(this.selectedFlight.flightId)!.setColor(AircraftIcon.INACTIVE_COLOR)       
             }
         }
 
         private selectFlight(flightId: string): void {
             console.log(`selected flight: ${flightId}`)
             this.unselectFlight();
-            this.markers.get(flightId)!.setColor(AircraftIcon.HIGHLIGHT_COLOR)
+            
+            if(this.markers.has(flightId)) {
+                this.markers.get(flightId)!.setColor(AircraftIcon.HIGHLIGHT_COLOR)
+            }            
 
             this.selectedFlight = new FlightPath(flightId, this.map);
 
@@ -124,19 +135,27 @@
             this.emitFlightId(flightId);            
         }
 
-        private async loadPositions() {
+        private async loadLivePositions() {
             
             const positions = await this.frService.getLivePositions();
-            this.updateAircraft(positions);
+            this.updateAircraft(positions.values());
         }
 
-        private updateAircraft(positions: Map<string,FlightAndPosition>) {
-            positions.forEach( (flPos, key) => {
-                this.updateMarker(String(flPos.id), {lat: Number(flPos.pos.lat), lng: Number(flPos.pos.lon), heading: flPos.pos.track} as HereCoordinates);
-            });
+        private static convertToHereCoords(flPos: FlightAndPosition): HereCoordinates {
+            return {lat: Number(flPos.pos.lat), lng: Number(flPos.pos.lon), heading: flPos.pos.track} as HereCoordinates;
+        }
+
+        private async loadPositions(flightId: string) {            
+            const positions = await this.frService.getPositions(flightId);
+        }
+
+        private updateAircraft(positions: IterableIterator<FlightAndPosition>) {
+
+            for(let flPos of positions) {
+                this.updateMarker(flPos.id, HereMap.convertToHereCoords(flPos));
+            }
 
             const now = moment();
-
 
             // Purge stale markers
             for (let [key, value] of this.markers) {
@@ -146,20 +165,6 @@
                     this.removeMarker(key);             
                 }
             }            
-        }
-
-        public async mounted() {
-
-            this.initializeMap();    
-            this.map.setCenter({lat: '46.94825', lng: '7.42429'});
-
-            //TODO: stop update when navigating away
-            this.intervalId = setInterval( () => {
-                this.loadPositions();
-                if(this.selectedFlight) {
-                    this.updateFlightPath(this.selectedFlight.flightId);
-                }
-            }, 1000)
         }
 
         private async addFlightPath(flightId: string) {            
@@ -196,11 +201,32 @@
             }
         }
 
+        public async mounted() {
+
+
+            console.log("mount: "  + this.flightId)
+            this.initializeMap();    
+            this.map.setCenter({lat: this.lat, lng: this.lng});
+
+            
+
+            if(this.liveMode) {
+                //TODO: stop update when navigating away
+                this.intervalId = setInterval( () => {
+                    this.loadLivePositions();
+                    if(this.selectedFlight) {
+                        this.updateFlightPath(this.selectedFlight.flightId);
+                    }
+                }, 1000);
+            } else if (this.flightId) {
+                this.selectFlight(this.flightId);
+            }
+        }
+
         beforeDestroy () {
             if(this.intervalId)
                 clearInterval(this.intervalId);
         }
-
     }
 
 </script>

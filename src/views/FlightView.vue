@@ -11,8 +11,8 @@
         height="835px" 
         v-on:on-marker-clicked="updateSidebar($event)"
         :pathVisible="sidebarVisible"
-        :liveMode="true"
-        :flightId="null"
+        :liveMode="false"
+        :flightId="selectedFlight"
         />
 </div>
  
@@ -31,7 +31,13 @@ Vue.component('b-sidebar', BSidebar)
 @Component({
   components: {HereMap, FlightDetail}
 })
-export default class LiveRadar extends Vue {
+export default class FlightView extends Vue {
+
+  @Watch('$route', { immediate: true, deep: true })
+   onUrlChange(newVal: any) {
+      this.selectedFlight = newVal.params.flightId;      
+    }
+
 
   constructor() {
     super();
@@ -56,7 +62,6 @@ export default class LiveRadar extends Vue {
     this.sidebarVisible = true;
     this.selectedFlight = flightId;
   }
-
 }
 
 </script>
