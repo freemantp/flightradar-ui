@@ -3,6 +3,7 @@ export interface Flight {
     id: string;
     icao24: string;
     cls: string;
+    firstCntct: Date
     lstCntct: Date
 }
 

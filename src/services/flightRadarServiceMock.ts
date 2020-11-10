@@ -10,7 +10,7 @@ export class FlightRadarServiceMock implements FlightRadarService {
         {lat: 46.915023, lon: 7.496388}
     ]
 
-    getFlights(numEntries: number): Promise<Flight[]> {
+    getFlights(numEntries: number, filter: string|null=null): Promise<Flight[]> {
         throw new Error("Method not implemented.");
     }
     getFlight(id: string): Promise<Flight> {

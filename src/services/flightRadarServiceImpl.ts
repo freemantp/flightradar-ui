@@ -27,8 +27,13 @@ export class FlightRadarServiceImpl implements FlightRadarService {
         }        
     } 
 
-    public async getFlights(numEntries: number=10): Promise<Array<Flight>> {
-        const res = await axios.get(`${this.apiBasepath}/flights?limit=${numEntries}`, this.config);
+    public async getFlights(numEntries: number=10, filter: string|null=null): Promise<Array<Flight>> {
+
+        let urlWithParams: string = filter == null
+            ? `${this.apiBasepath}/flights?limit=${numEntries}`
+            : `${this.apiBasepath}/flights?limit=${numEntries}&filter=${filter}`;
+
+        const res = await axios.get(urlWithParams, this.config);
 
         if (this.is2xx(res))
             return res.data;

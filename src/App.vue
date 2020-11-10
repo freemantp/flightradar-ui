@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <nav id="nav">
-      <router-link :to="{ name: 'home'}">Live Radar</router-link>|
+      <router-link :to="{ name: 'home'}">Live Radar</router-link>&nbsp;|&nbsp;
       <router-link :to="{ name: 'flightlog'}">Flight log</router-link>
     </nav>
     <router-view />

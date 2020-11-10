@@ -7,7 +7,7 @@ export interface FlightAndPosition {
 
 export interface FlightRadarService {
  
-    getFlights(numEntries: number): Promise<Array<Flight>>;
+    getFlights(numEntries: number, filter: string|null): Promise<Array<Flight>>;
 
     getFlight(id: string): Promise<Flight>;
 
