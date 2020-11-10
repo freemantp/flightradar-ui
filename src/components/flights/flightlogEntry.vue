@@ -34,7 +34,6 @@
     export default class FlightLogEntry extends mixins(AircraftIcon) {
 
         @Prop() readonly flight!: Flight;
-        @Prop(Date) readonly lastContact!: Date;
 
         @Inject('radarService') readonly frService!: FlightRadarService
         
@@ -50,25 +49,42 @@
         }
 
         get isLive(): boolean {
-            const lastContact = moment(this.lastContact);
+            const lastContact = moment(this.flight.lstCntct);
             return moment().diff(lastContact, 'minutes') < 5;
         }
 
         get timestampTooltip(): string {
 
-            const lastContact = moment(this.lastContact);
-            const hoursSinceMidnight = moment().startOf('day').diff(lastContact, 'hours');
+            const lastContact = moment(this.flight.lstCntct);
+            const firstContact = moment(this.flight.firstCntct);            
+
+            let lastContactStr: string = this.getTimestampString(lastContact);
+            let firstContactStr: string = this.getTimestampString(firstContact);
+
+            return `first contact: ${firstContactStr}\nlast seen: ${lastContactStr}`;
+
+            
+        }
+
+        private getTimestampString(timestamp: moment.Moment) : string {
+            
+            const hoursSinceMidnight = moment().startOf('day').diff(timestamp, 'hours');
+            let timestmpStr: string = '';
 
             if (hoursSinceMidnight <= 0) {
                 if (this.isLive)
-                    return `${moment().diff(lastContact, 'minutes')} minutes ago`;
+                    timestmpStr = `${moment().diff(timestamp, 'minutes')} minutes ago`;
                 else
-                    return `Today, ${lastContact.format("HH:mm")}`;
+                    timestmpStr = `Today, ${timestamp.format("HH:mm")}`;
             }     
-            else if (hoursSinceMidnight > 0 && hoursSinceMidnight < 24)
-                return `Yesterday, ${lastContact.format("HH:mm")}`;
-            else 
-                return lastContact.format("D.M.YYYY HH:mm")
+            else if (hoursSinceMidnight > 0 && hoursSinceMidnight < 24) {
+                timestmpStr = `Yesterday, ${timestamp.format("HH:mm")}`;
+            }
+            else {
+                timestmpStr = timestamp.format("D.M.YYYY HH:mm")
+            }
+
+            return timestmpStr;
         }
 
         get aircaftOperatorTruncated(): string {
