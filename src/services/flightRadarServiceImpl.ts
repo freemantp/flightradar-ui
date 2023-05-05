@@ -61,20 +61,22 @@ export class FlightRadarServiceImpl implements FlightRadarService {
 
     public async getLivePositions(): Promise<Map<string,FlightAndPosition>>  {
         return axios.get(`${this.apiBasepath}/positions/live`, this.config)
-            .then((res: AxiosResponse<Map<string,Array<number>>>) => {
+            .then((res: AxiosResponse) => {
                 if (this.is2xx(res)) {
-                    let vals: object = _.mapValues(res.data, (arr: any[], key: string) => {
 
-                        return {
-                            id: key,
-                            pos: {
-                                lat: arr[0], 
-                                lon: arr[1], 
-                                alt: arr[2], 
-                                track: _.isNull(arr[3]) ? null : _.round(arr[3])
-                            } as TerrestialPosition
-                        } as FlightAndPosition;                    
-                    });
+                    let vals = _.map(res.data, (d, v) => { 
+                        return { 
+                            id: v, 
+                            pos : {
+                                lat: d.lat, 
+                                lon: d.lon, 
+                                alt: d.alt, 
+                                track: _.isNull(d.track) ? null : _.round(d.track)
+
+                                } as TerrestialPosition
+                            } as FlightAndPosition 
+                        });
+
                     return new Map(Object.entries(vals));
                 }
                 else
@@ -85,10 +87,10 @@ export class FlightRadarServiceImpl implements FlightRadarService {
     public async getPositions(flightid: string): Promise<Array<TerrestialPosition>> {
 
         return axios.get(`${this.apiBasepath}/flights/${flightid}/positions`, this.config)
-             .then((res: AxiosResponse<Array<Array<Array<number>>>>) => {
+             .then((res: AxiosResponse<Array<Array<number>>>) => {
                  
                 if (this.is2xx(res)) {
-                    return res.data[0].map((arr: Array<number>) => {
+                    return res.data.map((arr: Array<number>) => {
                         return {lat: arr[0], lon: arr[1], alt: arr[2]} as TerrestialPosition;
                     })
                 }
