@@ -1,57 +1,56 @@
 <template>
   <div class="about">
-
-    <b-spinner v-if="flights.length == 0" label="Spinning"></b-spinner>
-
-    <flight-log-entry v-for="flight in flights" :key="flight.id" 
-                  v-bind:icao24='flight.icao24' 
-                  v-bind:callsign='flight.cls' 
-                  v-bind:lastContact='new Date(flight.lstCntct)' 
-                  class="mx-auto"
-                  />
+    <div v-if="flights.length == 0" class="spinner-border" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    Filter:
+    <button type="button" class="btn btn-sm" @click="toggleBoolean" :class="{ 'btn-outline-secondary': !militaryFilter, 'btn-outline-dark': militaryFilter }">Military</button>
+    <FlightlogEntry v-for="flight in flights" :key="flight.id" v-bind:flight="flight" class="mx-auto" />
   </div>
 </template>
 
-<script lang="ts">
-  import Vue from 'vue';
-  import Component from 'vue-class-component';
-  import FlightLogEntry from '@/components/flights/flightlogEntry.vue';
-  import { Flight } from '@/model/backendModel';
-  import { Inject } from 'vue-property-decorator';
-  import { FlightRadarService } from '@/services/flightRadarService';
+<script setup lang="ts">
+import { onMounted, onBeforeUnmount, inject, ref } from 'vue';
+import { Flight } from '@/model/backendModel';
+import { FlightRadarService } from '../services/flightRadarService';
+import FlightlogEntry from '@/components/flights/FlightlogEntry.vue';
 
-  @Component({ components: {
-    FlightLogEntry
-  }})
-  export default class FlightLog extends Vue {
-    
-    public flights: Array<Flight> = []
+let flights = ref<Array<Flight>>([]);
 
-    private intervalId?: NodeJS.Timeout
+const frService = inject('frService') as FlightRadarService;
 
-    @Inject('radarService') readonly frService!: FlightRadarService
+let intervalId = ref<ReturnType<typeof setTimeout>>();
 
-    async loadData() {
-      try {
-        this.flights = await this.frService.getFlights(30);
-      }
-      catch(err) {
-        console.error('Could not recent flights');
-      }      
-    }
-    
-    async mounted() {
+let militaryFilter = ref<boolean>(false);
 
-      this.loadData();      
-
-      this.intervalId = setInterval( () => {
-         this.loadData();
-      }, 5000)
-    }    
-
-    beforeDestroy () {
-      if(this.intervalId)
-        clearInterval(this.intervalId);
-    }
+let loadData = async () => {
+  try {
+    const limit = 100;
+    let filter = militaryFilter.value ? 'mil' : undefined;
+    flights.value = await frService.getFlights(limit, filter);
+  } catch (err) {
+    console.error('Could not recent flights:' + err);
   }
+};
+
+onMounted(() => {
+  console.log(`the component is now mounted.`);
+
+  loadData();
+
+  intervalId.value = setInterval(() => {
+    loadData();
+  }, 5000);
+});
+
+onBeforeUnmount(() => {
+  if (intervalId.value) clearInterval(intervalId.value);
+});
+
+let toggleBoolean = () => {
+  militaryFilter.value = !militaryFilter.value;
+
+  flights.value = [];
+  loadData();
+};
 </script>

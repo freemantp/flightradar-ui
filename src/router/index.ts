@@ -1,27 +1,31 @@
-import Vue from 'vue'
-import VueRouter from 'vue-router'
-import LiveRadar from '@/views/LiveRadar.vue'
+import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
+import LiveRadar from '../views/LiveRadar.vue';
+import FlightView from '../views/FlightView.vue';
 
-Vue.use(VueRouter)
-
-const routes = [
+const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     name: 'LiveRadar',
-    component: LiveRadar
+    component: LiveRadar,
   },
   {
     path: '/flightlog',
-    name: 'FlightLog',
+    name: 'flightlog',
     // route level code-splitting
-    // this generates a separate chunk (*.[hash].js) for this route
+    // this generates a separate chunk (about.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () => import('@/views/FlightLog.vue')
-  }
-]
+    component: () => import(/* webpackChunkName: "about" */ '../views/FlightLog.vue'),
+  },
+  {
+    path: '/flight/:flightId',
+    name: 'flightview',
+    component: FlightView,
+  },
+];
 
-const router = new VueRouter({
-  routes
-})
+const router = createRouter({
+  history: createWebHistory(process.env.BASE_URL),
+  routes,
+});
 
-export default router
+export default router;

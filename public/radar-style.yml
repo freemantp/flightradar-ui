@@ -461,7 +461,6 @@ global:
 
 textures:
   icon_library:
-    url: icons/sprite-2x.png
     # filtering: mipmap
     density: 2
     sprites:
@@ -484,7 +483,7 @@ textures:
 fonts:
   FiraGO:
     - weight: normal
-      url: ../fonts/FiraGO-Map.woff
+      url: ../fonts/FiraGO-Regular.woff
 
 styles:
   shields:

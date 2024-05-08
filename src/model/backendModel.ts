@@ -1,21 +1,24 @@
 export interface Flight {
-
-    id: string;
-    icao24: string;
-    cls: string;
-    lstCntct: Date
+  id: string;
+  icao24: string;
+  cls: string;
+  firstCntct: Date;
+  lstCntct: Date;
 }
 
 export interface TerrestialPosition {
-    lat: number;
-    lon: number;
-    alt?: number;
+  icao: string;
+  callsign: string;
+  lat: number;
+  lon: number;
+  alt?: number;
+  track?: number;
 }
 
 export interface Aircraft {
-    icao24: string
-    type?: string;
-    icaoType?: string;
-    reg?: string;
-    op?: string;
+  icao24: string;
+  type?: string;
+  icaoType?: string;
+  reg?: string;
+  op?: string;
 }
