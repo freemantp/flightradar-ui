@@ -1,106 +1,85 @@
-import axios, { AxiosResponse, AxiosRequestConfig } from 'axios'
-import {Flight, Aircraft, TerrestialPosition} from '@/model/backendModel'
-import {Configuration} from '@/config'
-import {FlightRadarService, FlightAndPosition}  from './flightRadarService';
+import axios, { AxiosResponse, AxiosRequestConfig } from 'axios';
+import { Flight, Aircraft, TerrestialPosition } from '@/model/backendModel';
+import { Configuration } from '@/config';
+import { FlightRadarService } from './flightRadarService';
 
-import _ from 'lodash'
+import _ from 'lodash';
 
 export class FlightRadarServiceImpl implements FlightRadarService {
+  private config: AxiosRequestConfig;
+  private apiBasepath: string;
 
-    private config: AxiosRequestConfig; 
-    private apiBasepath: string;
+  constructor() {
+    this.config = Configuration.value('flightApiUser')
+      ? ({
+          auth: {
+            username: Configuration.value('flightApiUser'),
+            password: Configuration.value('flightApiPassword'),
+          },
+        } as AxiosRequestConfig)
+      : {};
 
-    constructor() {        
-        this.config = Configuration.value('flightApiUser') ? {
-            auth: {
-                username: Configuration.value('flightApiUser'),
-                password: Configuration.value('flightApiPassword')
-            } 
-        } as AxiosRequestConfig : { }
+    const basePath = Configuration.value('flightApiUrl');
 
-       let basePath = Configuration.value('flightApiUrl');
-
-        if(basePath) {
-            this.apiBasepath = basePath;
-        } else {
-            throw 'Flight API URL not defined';
-        }        
-    } 
-
-    public async getFlights(numEntries: number=10, filter: string|null=null): Promise<Array<Flight>> {
-
-        let urlWithParams: string = filter == null
-            ? `${this.apiBasepath}/flights?limit=${numEntries}`
-            : `${this.apiBasepath}/flights?limit=${numEntries}&filter=${filter}`;
-
-        const res = await axios.get(urlWithParams, this.config);
-
-        if (this.is2xx(res))
-            return res.data;
-        else
-          throw res.statusText;        
+    if (basePath) {
+      this.apiBasepath = basePath;
+    } else {
+      throw 'Flight API URL not defined';
     }
+  }
 
-    public async getFlight(id: string): Promise<Flight> {
-        const res = await axios.get(`${this.apiBasepath}/flights/${id}`, this.config);
+  public async getFlights(numEntries: number, filter?: string): Promise<Array<Flight>> {
+    const urlWithParams: string = filter == null ? `${this.apiBasepath}/flights?limit=${numEntries}` : `${this.apiBasepath}/flights?limit=${numEntries}&filter=${filter}`;
 
-        if (this.is2xx(res))
-            return res.data;
-        else
-          throw res.statusText;        
-    }
+    const res = await axios.get(urlWithParams, this.config);
 
-    public async getAircraft(icaoHexAddr: string): Promise<Aircraft> {
-        const res = await axios.get(`${this.apiBasepath}/aircraft/${icaoHexAddr}`, this.config);
+    if (this.is2xx(res)) return res.data;
+    else throw res.statusText;
+  }
 
-        if (this.is2xx(res))
-            return res.data;
-        else
-          throw res.statusText;        
-    }
+  public async getFlight(id: string): Promise<Flight> {
+    const res = await axios.get(`${this.apiBasepath}/flights/${id}`, this.config);
 
-    public async getLivePositions(): Promise<Map<string,FlightAndPosition>>  {
-        return axios.get(`${this.apiBasepath}/positions/live`, this.config)
-            .then((res: AxiosResponse) => {
-                if (this.is2xx(res)) {
+    if (this.is2xx(res)) return res.data;
+    else throw res.statusText;
+  }
 
-                    let vals = _.map(res.data, (d, v) => { 
-                        return { 
-                            id: v, 
-                            pos : {
-                                lat: d.lat, 
-                                lon: d.lon, 
-                                alt: d.alt, 
-                                track: _.isNull(d.track) ? null : _.round(d.track)
+  public async getAircraft(icaoHexAddr: string): Promise<Aircraft> {
+    const res = await axios.get(`${this.apiBasepath}/aircraft/${icaoHexAddr}`, this.config);
 
-                                } as TerrestialPosition
-                            } as FlightAndPosition 
-                        });
+    if (this.is2xx(res)) return res.data;
+    else throw res.statusText;
+  }
 
-                    return new Map(Object.entries(vals));
-                }
-                else
-                    throw res.statusText; 
-                });
-    }
+  public async getLivePositions(): Promise<Map<string, TerrestialPosition>> {
+    return axios.get(`${this.apiBasepath}/positions/live`, this.config).then((res: AxiosResponse) => {
+      if (this.is2xx(res)) {
+        const vals: object = _.mapValues(res.data, (arr: TerrestialPosition) => {
+          if (!_.isUndefined(arr.track)) {
+            arr.track = _.round(arr.track);
+          }
+          return arr;
+        });
+        return new Map(Object.entries(vals));
+      } else throw res.statusText;
+    });
+  }
 
-    public async getPositions(flightid: string): Promise<Array<TerrestialPosition>> {
+  public async getPositions(flightid: string): Promise<Array<TerrestialPosition>> {
+    return axios.get(`${this.apiBasepath}/flights/${flightid}/positions`, this.config).then((res: AxiosResponse<Array<Array<number>>>) => {
+      if (this.is2xx(res)) {
+        return res.data.map((arr: Array<number>) => {
+          return {
+            lat: arr[0],
+            lon: arr[1],
+            alt: arr[2],
+          } as TerrestialPosition;
+        });
+      } else throw res.statusText;
+    });
+  }
 
-        return axios.get(`${this.apiBasepath}/flights/${flightid}/positions`, this.config)
-             .then((res: AxiosResponse<Array<Array<number>>>) => {
-                 
-                if (this.is2xx(res)) {
-                    return res.data.map((arr: Array<number>) => {
-                        return {lat: arr[0], lon: arr[1], alt: arr[2]} as TerrestialPosition;
-                    })
-                }
-                else
-                    throw res.statusText; 
-                });
-    }
-
-    private is2xx(result: AxiosResponse<any>): boolean {
-        return result.status >= 200 && result.status < 300;
-    }
-
+  private is2xx(result: AxiosResponse): boolean {
+    return result.status >= 200 && result.status < 300;
+  }
 }

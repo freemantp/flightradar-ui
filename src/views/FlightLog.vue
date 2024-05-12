@@ -1,79 +1,56 @@
 <template>
   <div class="about">
-
-Filter:
-    <b-button size="sm" :pressed.sync="militaryFilter" :variant="buttonVariant">Military</b-button> 
-
-    <b-overlay :show="flights.length == 0" rounded="sm">
-        
-      
-
-      <flight-log-entry
-        v-for="flight in flights"
-        :key="flight.id"
-        v-bind:flight="flight"
-        class="mx-auto"/>
-
-    </b-overlay>
-
-
+    <div v-if="flights.length == 0" class="spinner-border" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    Filter:
+    <button type="button" class="btn btn-sm" @click="toggleBoolean" :class="{ 'btn-outline-secondary': !militaryFilter, 'btn-outline-dark': militaryFilter }">Military</button>
+    <FlightlogEntry v-for="flight in flights" :key="flight.id" v-bind:flight="flight" class="mx-auto" />
   </div>
 </template>
 
-<script lang="ts">
-import Vue from "vue";
-import Component from "vue-class-component";
-import { BButton } from "bootstrap-vue";
-import FlightLogEntry from "@/components/flights/flightlogEntry.vue";
-import { Flight } from "@/model/backendModel";
-import { Inject, Watch } from "vue-property-decorator";
-import { FlightRadarService } from "@/services/flightRadarService";
+<script setup lang="ts">
+import { onMounted, onBeforeUnmount, inject, ref } from 'vue';
+import { Flight } from '@/model/backendModel';
+import { FlightRadarService } from '../services/flightRadarService';
+import FlightlogEntry from '@/components/flights/FlightlogEntry.vue';
 
-@Component({
-  components: {
-    FlightLogEntry,
-  },
-})
-export default class FlightLog extends Vue {
-  public flights: Array<Flight> = [];
+let flights = ref<Array<Flight>>([]);
 
-  public militaryFilter: boolean = false;
-  public show: boolean = false;
+const frService = inject('frService') as FlightRadarService;
 
-  private intervalId?: NodeJS.Timeout;
+let intervalId = ref<ReturnType<typeof setTimeout>>();
 
-  @Inject("radarService") readonly frService!: FlightRadarService;
+let militaryFilter = ref<boolean>(false);
 
-  get buttonVariant(): string {
-    return this.militaryFilter ? "secondary" : "outline-secondary";
+let loadData = async () => {
+  try {
+    const limit = 100;
+    let filter = militaryFilter.value ? 'mil' : undefined;
+    flights.value = await frService.getFlights(limit, filter);
+  } catch (err) {
+    console.error('Could not recent flights:' + err);
   }
+};
 
-  @Watch("militaryFilter")
-  async onFiilterChanged(val: string, oldVal: string) {
-    this.flights = [];
-    this.loadData();
-  }
+onMounted(() => {
+  console.log(`the component is now mounted.`);
 
-  async loadData() {
-    try {
-      let limit: number = 200;
-      let filter: string | null = this.militaryFilter ? "mil" : null;
-      this.flights = await this.frService.getFlights(limit, filter);
-    } catch (err) {
-      console.error("Could not recent flights");
-    }
-  }
+  loadData();
 
-  async mounted() {
-    this.loadData();
+  intervalId.value = setInterval(() => {
+    loadData();
+  }, 5000);
+});
 
-    this.intervalId = setInterval(() => {
-      this.loadData();
-    }, 5000);
-  }
+onBeforeUnmount(() => {
+  if (intervalId.value) clearInterval(intervalId.value);
+});
 
-  beforeDestroy() {
-    if (this.intervalId) clearInterval(this.intervalId);
-  }
-}
+let toggleBoolean = () => {
+  militaryFilter.value = !militaryFilter.value;
+
+  flights.value = [];
+  loadData();
+};
 </script>

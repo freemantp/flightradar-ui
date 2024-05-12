@@ -1,4 +1,4 @@
-# vue-radar
+# flightradar-ui
 
 ## Project setup
 ```
@@ -14,12 +14,10 @@ npm run serve
 ```
 npm run build
 ```
-## Run as docker container
+
+### Lints and fixes files
 ```
-docker run -p 80:80/tcp 
--e VUE_APP_FLIGHT_API_URL='http://path/to/backend/api/v1' \
--e VUE_APP_HERE_API_KEY='my-here-api-key' \
-dockerimagename:version
+npm run lint
 ```
 
 ### Customize configuration
