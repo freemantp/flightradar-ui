@@ -1,5 +1,12 @@
 <template>
-  <div class="offcanvas offcanvas-start" data-bs-backdrop="false" tabindex="-1" id="sidebar" aria-labelledby="offcanvasExampleLabel" ref="sidebar">
+  <div
+    :class="[{ 'offcanvas-start': !isMobile, 'offcanvas-bottom': isMobile }, 'offcanvas']"
+    data-bs-backdrop="false"
+    tabindex="-1"
+    id="sidebar"
+    aria-labelledby="offcanvasExampleLabel"
+    ref="sidebar"
+  >
     <div class="offcanvas-header">
       <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
@@ -8,7 +15,17 @@
     </div>
   </div>
 
-  <HereMap v-bind:apikey="apiKey" lat="46.9479" lng="7.4446" width="100%" height="835px" :liveMode="true" @on-marker-clicked="showFlightDetails($event)" ref="mapComponent" />
+  <HereMap
+    v-bind:apikey="apiKey"
+    lat="46.9479"
+    lng="7.4446"
+    width="100%"
+    height="835px"
+    :aerialOverview="true"
+    :peridicallyRefresh="true"
+    @on-marker-clicked="showFlightDetails($event)"
+    ref="mapComponent"
+  />
 </template>
 
 <script setup lang="ts">
@@ -25,9 +42,13 @@ const mapComponent = ref();
 
 const apiKey = Configuration.value('hereApiKey');
 
+const isMobile = ref();
+
 let selectedFlight = ref<string>();
 
 onMounted(() => {
+  isMobile.value = window.innerWidth < 768;
+
   const sidebarElement = document.getElementById('sidebar');
   if (sidebarElement) {
     sidebarElement.addEventListener('hide.bs.offcanvas', () => {

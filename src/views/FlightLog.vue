@@ -4,7 +4,9 @@
       <span class="visually-hidden">Loading...</span>
     </div>
     Filter:
-    <button type="button" class="btn btn-sm" @click="toggleBoolean" :class="{ 'btn-outline-secondary': !militaryFilter, 'btn-outline-dark': militaryFilter }">Military</button>
+    <button type="button" class="btn btn-sm" @click="toggleBoolean" :class="{ 'btn-outline-secondary': !militaryFilter, 'btn-outline-dark': militaryFilter }">
+      Military
+    </button>
     <FlightlogEntry v-for="flight in flights" :key="flight.id" v-bind:flight="flight" class="mx-auto" />
   </div>
 </template>
@@ -34,8 +36,6 @@ let loadData = async () => {
 };
 
 onMounted(() => {
-  console.log(`the component is now mounted.`);
-
   loadData();
 
   intervalId.value = setInterval(() => {

@@ -3,25 +3,24 @@
 </template>
 
 <script setup lang="ts">
-import { inject, onBeforeMount, onMounted, onBeforeUnmount, ref } from 'vue';
+import { inject, onBeforeMount, onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { TerrestialPosition } from '@/model/backendModel';
 import { FlightRadarService } from '@/services/flightRadarService';
 import { AircraftIcon, AircraftMarker } from '@/components/map/aircraftElements';
 import { FlightPath, HereCoordinates } from '@/components/map/flightPath';
 import moment from 'moment';
 
-const frService = inject('frService') as FlightRadarService;
+const radarService = inject('frService') as FlightRadarService;
 
 const props = defineProps({
-  appId: String,
+  apikey: String,
   lat: String,
   lng: String,
   width: String,
   height: String,
-  apikey: String,
-  pathVisible: Boolean,
-  liveMode: Boolean,
-  flightId: String,
+  aerialOverview: Boolean, // If enabled displays a view of aircaft in the air
+  highlightedFlightId: String, //If set displays the flightpath of the selected flight (historical and live)
+  peridicallyRefresh: Boolean,
 });
 
 const emit = defineEmits(['onMarkerClicked']);
@@ -46,30 +45,47 @@ onBeforeMount(async () => {
   aircraftIcon = new AircraftIcon(iconSvgMap);
 });
 
-onMounted(async () => {
+watch(
+  () => props.highlightedFlightId,
+  () => {
+    if (props.highlightedFlightId) {
+      addFlightPath(props.highlightedFlightId);
+    }
+  }
+);
+
+onMounted(() => {
   initializeMap();
   map.setCenter({ lat: props.lat, lng: props.lng });
 
-  if (props.liveMode) {
+  updateData();
+
+  if (props.peridicallyRefresh) {
     //TODO: stop update when navigating away
     intervalId.value = setInterval(() => {
-      loadLivePositions();
-      if (selectedFlight) {
-        updateFlightPath(selectedFlight.flightId);
-      }
+      updateData();
     }, 1000);
-  } else if (props.flightId) {
-    selectFlight(props.flightId);
+  } else {
+    if (intervalId.value) clearInterval(intervalId.value);
   }
 });
+
+const updateData = () => {
+  if (props.aerialOverview) {
+    loadLivePositions();
+  }
+  if (props.highlightedFlightId) {
+    updateSelectedFlightPath();
+  }
+};
 
 onBeforeUnmount(async () => {
   if (intervalId.value) clearInterval(intervalId.value);
 });
 
 const loadLivePositions = async () => {
-  const positions = await frService.getLivePositions();
-  updateAircraft(positions);
+  const positions = await radarService.getAircaftPositions();
+  updateAircaftPositions(positions);
 };
 
 const resetIcon = () => {
@@ -84,6 +100,7 @@ const unselectFlight = () => {
   if (selectedFlight) {
     console.log('unselectFlight:' + selectedFlight.flightId);
     selectedFlight.removeFlightPath();
+
     selectedFlight = null;
   }
 };
@@ -108,7 +125,7 @@ const convertToHereCoords = (flPos: TerrestialPosition): HereCoordinates => {
   return { lat: Number(flPos.lat), lng: Number(flPos.lon), heading: flPos.track } as HereCoordinates;
 };
 
-const updateAircraft = (positions: Map<string, TerrestialPosition>) => {
+const updateAircaftPositions = (positions: Map<string, TerrestialPosition>) => {
   positions.forEach((pos: TerrestialPosition, flightId: string) => {
     updateMarker(flightId, convertToHereCoords(pos));
   });
@@ -124,9 +141,9 @@ const updateAircraft = (positions: Map<string, TerrestialPosition>) => {
   }
 };
 
-const updateFlightPath = async (flightId: string) => {
+const updateSelectedFlightPath = async () => {
   if (selectedFlight) {
-    const positions: TerrestialPosition[] = await frService.getPositions(flightId);
+    const positions: TerrestialPosition[] = await radarService.getPositions(selectedFlight.flightId);
     selectedFlight.updateFlightPath(positions);
   }
 };
@@ -143,7 +160,9 @@ const updateMarker = (id: string, coords: HereCoordinates) => {
 };
 
 const addFlightPath = async (flightId: string) => {
-  const positions: TerrestialPosition[] = await frService.getPositions(flightId);
+  selectedFlight = new FlightPath(flightId, map);
+  const positions: TerrestialPosition[] = await radarService.getPositions(flightId);
+
   if (selectedFlight) {
     selectedFlight.createFlightPath(positions);
   }
@@ -160,8 +179,6 @@ const selectFlight = (flightId: string) => {
   if (markers.has(flightId)) {
     markers.get(flightId)?.setColor(AircraftIcon.HIGHLIGHT_COLOR);
   }
-
-  selectedFlight = new FlightPath(flightId, map);
 
   addFlightPath(flightId);
   emitFlightId(flightId);

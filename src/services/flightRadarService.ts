@@ -7,7 +7,7 @@ export interface FlightRadarService {
 
   getAircraft(icaoHexAddr: string): Promise<Aircraft>;
 
-  getLivePositions(): Promise<Map<string, TerrestialPosition>>;
+  getAircaftPositions(): Promise<Map<string, TerrestialPosition>>;
 
   getPositions(flightId: string): Promise<Array<TerrestialPosition>>;
 }

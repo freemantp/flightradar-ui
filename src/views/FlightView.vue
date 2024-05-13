@@ -1,5 +1,5 @@
 <template>
-  <div class="offcanvas offcanvas-start" data-bs-backdrop="false" tabindex="-1" id="sidebar" aria-labelledby="offcanvasExampleLabel" ref="sidebar">
+  <div :class="[{ 'offcanvas-start': !isMobile, 'offcanvas-bottom': isMobile }, 'offcanvas']" data-bs-backdrop="false" tabindex="-1" id="sidebar" ref="sidebar">
     <div class="offcanvas-header">
       <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
@@ -13,9 +13,9 @@
     lng="7.4446"
     width="100%"
     height="835px"
-    :liveMode="false"
-    :flightId="flightId"
-    :pathVisible="true"
+    :aerialOverview="false"
+    :highlightedFlightId="flightId"
+    :peridicallyRefresh="false"
     ref="mapComponent"
   />
 </template>
@@ -35,7 +35,10 @@ const sidebar = ref();
 
 const flightId = ref();
 
+const isMobile = ref();
+
 onMounted(() => {
+  isMobile.value = window.innerWidth < 768;
   const route = useRoute();
   flightId.value = route.params.flightId;
 

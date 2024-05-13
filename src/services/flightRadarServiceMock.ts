@@ -31,7 +31,7 @@ export class FlightRadarServiceMock implements FlightRadarService {
       op: 'Pilatus Werke',
     } as Aircraft);
   }
-  getLivePositions(): Promise<Map<string, TerrestialPosition>> {
+  getAircaftPositions(): Promise<Map<string, TerrestialPosition>> {
     return Promise.resolve(
       new Map(
         Object.entries({

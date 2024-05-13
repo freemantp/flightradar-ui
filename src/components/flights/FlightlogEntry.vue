@@ -34,7 +34,7 @@ onMounted(async () => {
   try {
     aircraft.value = await frService.getAircraft(props.flight.icao24);
   } catch (err) {
-    console.error(`Could not obtain details for ${props.flight.icao24}`);
+    console.debug(`Could not obtain details for ${props.flight.icao24}`);
   }
 });
 

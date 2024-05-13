@@ -29,7 +29,8 @@ export class FlightRadarServiceImpl implements FlightRadarService {
   }
 
   public async getFlights(numEntries: number, filter?: string): Promise<Array<Flight>> {
-    const urlWithParams: string = filter == null ? `${this.apiBasepath}/flights?limit=${numEntries}` : `${this.apiBasepath}/flights?limit=${numEntries}&filter=${filter}`;
+    const urlWithParams: string =
+      filter == null ? `${this.apiBasepath}/flights?limit=${numEntries}` : `${this.apiBasepath}/flights?limit=${numEntries}&filter=${filter}`;
 
     const res = await axios.get(urlWithParams, this.config);
 
@@ -51,7 +52,7 @@ export class FlightRadarServiceImpl implements FlightRadarService {
     else throw res.statusText;
   }
 
-  public async getLivePositions(): Promise<Map<string, TerrestialPosition>> {
+  public async getAircaftPositions(): Promise<Map<string, TerrestialPosition>> {
     return axios.get(`${this.apiBasepath}/positions/live`, this.config).then((res: AxiosResponse) => {
       if (this.is2xx(res)) {
         const vals: object = _.mapValues(res.data, (arr: TerrestialPosition) => {
