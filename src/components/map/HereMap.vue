@@ -9,6 +9,7 @@ import { FlightRadarService } from '@/services/flightRadarService';
 import { AircraftIcon, AircraftMarker } from '@/components/map/aircraftElements';
 import { FlightPath, HereCoordinates } from '@/components/map/flightPath';
 import moment from 'moment';
+import _ from 'lodash';
 
 const radarService = inject('frService') as FlightRadarService;
 
@@ -74,7 +75,7 @@ const updateData = () => {
   if (props.aerialOverview) {
     loadLivePositions();
   }
-  if (props.highlightedFlightId) {
+  if (props.highlightedFlightId || !_.isNull(selectedFlight)) {
     updateSelectedFlightPath();
   }
 };
