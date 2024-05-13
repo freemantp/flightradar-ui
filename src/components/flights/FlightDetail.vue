@@ -13,7 +13,7 @@
         <DetailField label="Registraton" :text="aircraft ? aircraft.reg : null" />
       </div>
       <div class="col">
-        <DetailField label="24 bit address" :text="aircraft ? aircraft.icao24 : null" />
+        <DetailField label="24 bit address" :text="flight ? flight.icao24 : null" />
       </div>
     </div>
     <div class="row">
@@ -48,20 +48,21 @@ const frService = inject('frService') as FlightRadarService;
 
 watch(
   () => props.flightId,
-  async (key, value) => {
+  async (value, key) => {
     if (value) {
       flight.value = await frService.getFlight(value);
       try {
         aircraft.value = await frService.getAircraft(flight.value.icao24);
       } catch (err) {
         console.error(err);
+        aircraft.value = undefined;
       }
     }
   }
 );
 
 const typeLabel = computed(() => {
-  return `Type (${aircraft.value ? aircraft.value.icaoType : ''})`;
+  return `Type (${aircraft.value?.icaoType ? aircraft.value.icaoType : 'Type'})`;
 });
 </script>
 

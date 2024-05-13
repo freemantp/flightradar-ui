@@ -28,9 +28,7 @@ const props = defineProps({
 
 const frService = inject('frService') as FlightRadarService;
 
-let aircraft = ref<Aircraft>({
-  icao24: '',
-});
+let aircraft = ref<Aircraft>({ icao24: '' });
 
 onMounted(async () => {
   try {
