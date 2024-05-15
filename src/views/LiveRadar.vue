@@ -20,7 +20,7 @@
     lat="46.9479"
     lng="7.4446"
     width="100%"
-    height="835px"
+    height="1600px"
     :aerialOverview="true"
     :peridicallyRefresh="true"
     @on-marker-clicked="showFlightDetails($event)"

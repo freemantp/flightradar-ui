@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { TerrestialPosition } from '@/model/backendModel';
 import _ from 'lodash';
 

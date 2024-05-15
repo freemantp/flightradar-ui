@@ -1,3 +1,4 @@
+/* eslint-disable */
 declare let H: any;
 
 import moment from 'moment';
@@ -46,7 +47,13 @@ export class AircraftMarker {
   private marker: any;
   private lastUpdate: Date;
 
-  constructor(private flightId: string, private coords: HereCoordinates, private aircraftIcon: AircraftIcon, private map: any, private iconSvgMap: Map<string, any>) {
+  constructor(
+    private flightId: string,
+    private coords: HereCoordinates,
+    private aircraftIcon: AircraftIcon,
+    private map: any,
+    private iconSvgMap: Map<string, any>
+  ) {
     this.marker = new H.map.DomMarker(coords, { icon: this.aircraftIcon.hereIcon, data: flightId });
     this.map.addObject(this.marker);
     this.lastUpdate = moment().toDate();

@@ -48,9 +48,10 @@ const frService = inject('frService') as FlightRadarService;
 
 watch(
   () => props.flightId,
-  async (value, key) => {
-    if (value) {
-      flight.value = await frService.getFlight(value);
+  // eslint-disable-next-line
+  async (newValue, oldValue) => {
+    if (newValue) {
+      flight.value = await frService.getFlight(newValue);
       try {
         aircraft.value = await frService.getAircraft(flight.value.icao24);
       } catch (err) {

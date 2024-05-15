@@ -21,7 +21,7 @@ module.exports = {
       {
         singleQuote: true,
         semi: true,
-        printWidth: 180,
+        printWidth: 160,
         htmlWhitespaceSensitivity: "ignore",
         endOfLine: "auto"
       }

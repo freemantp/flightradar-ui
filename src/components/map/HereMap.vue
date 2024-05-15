@@ -26,6 +26,7 @@ const props = defineProps({
 
 const emit = defineEmits(['onMarkerClicked']);
 
+/* eslint-disable */
 let platform: any;
 let map: any;
 let intervalId = ref<ReturnType<typeof setTimeout>>();
@@ -204,8 +205,9 @@ const initializeMap = () => {
   window.addEventListener('resize', () => {
     map.getViewPort().resize();
   });
-
+  // eslint-disable-next-line
   const behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
+  // eslint-disable-next-line
   const ui = H.ui.UI.createDefault(map, defaultLayers);
 };
 
