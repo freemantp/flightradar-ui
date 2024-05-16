@@ -9,7 +9,7 @@
     <div class="aircraftType">{{ aircaftTypeTruncated }}</div>
     <div class="operator">{{ aircaftOperatorTruncated }}</div>
     <router-link :to="{ name: 'flightview', params: { flightId: flight.id } }">
-      <i id="mdfdff" :class="[{ 'bi-airplane': isLive, 'bi-clouds': !isLive }, 'bi', 'liveStatus']"></i>
+      <i :class="[{ 'bi-airplane': isLive, 'bi-clouds': !isLive }, 'bi', 'liveStatus']"></i>
     </router-link>
   </div>
 </template>

@@ -17,8 +17,8 @@
 
   <HereMap
     v-bind:apikey="apiKey"
-    lat="46.9479"
-    lng="7.4446"
+    lat="46.8"
+    lng="8.15"
     width="100%"
     height="1600px"
     :aerialOverview="true"

@@ -1,8 +1,14 @@
 <template>
   <nav>
-    <router-link to="/">Live Radar</router-link>
-    |
-    <router-link to="/flightlog">Flight log</router-link>
+    <router-link to="/">
+      <i class="bi bi-radar"></i>
+      Live Radar
+    </router-link>
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    <router-link to="/flightlog">
+      <i class="bi bi-card-list"></i>
+      Flight log
+    </router-link>
   </nav>
   <router-view />
 </template>
@@ -40,7 +46,7 @@ export default defineComponent({
 }
 
 nav {
-  padding: 30px;
+  padding: 10px;
 }
 
 nav a {

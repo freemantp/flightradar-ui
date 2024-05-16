@@ -1,5 +1,11 @@
+<style>
+#mapContainer {
+  height: calc(100vh - 44px);
+  width: 100%;
+}
+</style>
 <template>
-  <div id="mapContainer" v-bind:style="{ width: width, height: height }"></div>
+  <div id="mapContainer"></div>
 </template>
 
 <script setup lang="ts">
@@ -17,8 +23,6 @@ const props = defineProps({
   apikey: String,
   lat: String,
   lng: String,
-  width: String,
-  height: String,
   aerialOverview: Boolean, // If enabled displays a view of aircaft in the air
   highlightedFlightId: String, //If set displays the flightpath of the selected flight (historical and live)
   peridicallyRefresh: Boolean,

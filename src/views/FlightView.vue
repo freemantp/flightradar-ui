@@ -9,10 +9,8 @@
   </div>
   <HereMap
     v-bind:apikey="apiKey"
-    lat="46.9479"
-    lng="7.4446"
-    width="100%"
-    height="1600px"
+    lat="46.8"
+    lng="7.15"
     :aerialOverview="false"
     :highlightedFlightId="flightId"
     :peridicallyRefresh="false"
