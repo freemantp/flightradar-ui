@@ -13,7 +13,7 @@
         <DetailField label="Registraton" :text="aircraft ? aircraft.reg : null" />
       </div>
       <div class="col">
-        <DetailField label="24 bit address" :text="flight ? flight.icao24 : null" />
+        <DetailField label="24 bit address" :text="flight ? flight.icao24.toUpperCase() : null" />
       </div>
     </div>
     <div class="row">

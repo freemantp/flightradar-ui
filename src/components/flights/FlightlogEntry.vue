@@ -39,8 +39,9 @@ onMounted(async () => {
 });
 
 const operatorTooltip = computed(() => {
-  let tooltipContent = `<strong>ICAO 24-bit: </strong> ${props.flight.icao24}<br/>${timestampTooltip.value}`;
-  if (aircraft.value.reg) tooltipContent += `<br><strong>Registration:</strong> ${aircraft.value.reg}`;
+  let tooltipContent = `<strong>ICAO 24-bit: </strong> ${props.flight.icao24.toUpperCase()}<br/>`;
+  if (aircraft.value.reg) tooltipContent += `<strong>Registration:</strong> ${aircraft.value.reg}<br/>`;
+  tooltipContent += `${timestampTooltip.value}`;
   return tooltipContent;
 });
 
@@ -49,8 +50,11 @@ const getTimestampString = (timestamp: moment.Moment): string => {
   let timestmpStr = '';
 
   if (hoursSinceMidnight <= 0) {
-    if (isLive.value) timestmpStr = `${moment().diff(timestamp, 'minutes')} minutes ago`;
-    else timestmpStr = `Today, ${timestamp.format('HH:mm')}`;
+    const minutes = moment().diff(timestamp, 'minutes');
+
+    if (isLive.value) {
+      timestmpStr = minutes == 0 ? 'tracking' : `${minutes} minutes ago`;
+    } else timestmpStr = `Today, ${timestamp.format('HH:mm')}`;
   } else if (hoursSinceMidnight > 0 && hoursSinceMidnight < 24) {
     timestmpStr = `Yesterday, ${timestamp.format('HH:mm')}`;
   } else {
@@ -67,7 +71,12 @@ const timestampTooltip = computed(() => {
   let lastContactStr: string = getTimestampString(lastContact);
   let firstContactStr: string = getTimestampString(firstContact);
 
-  return `first contact: ${firstContactStr}\nlast seen: ${lastContactStr}`;
+  let tooltip = `<i class="bi bi-radar"></i> ${lastContactStr}`;
+
+  if (lastContactStr !== firstContactStr) {
+    tooltip += `<br><i class="bi bi-box-arrow-in-right"></i> ${firstContactStr}`;
+  }
+  return tooltip;
 });
 
 const isLive = computed(() => {
