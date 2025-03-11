@@ -32,6 +32,7 @@ const loadData = async () => {
     flights.value = await frService.getFlights(limit, filter);
   } catch (err) {
     console.error('Could not recent flights:' + err);
+    flights.value = [];
   }
 };
 

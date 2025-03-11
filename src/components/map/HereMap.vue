@@ -90,8 +90,15 @@ onBeforeUnmount(async () => {
 });
 
 const loadLivePositions = async () => {
-  const positions = await radarService.getAircaftPositions();
-  updateAircaftPositions(positions);
+  try {
+    const positions = await radarService.getAircaftPositions();
+    if (positions) {
+      updateAircaftPositions(positions);
+    }
+  } catch (error) {
+    // Handle API connection error silently
+    // No need to show an error to the user
+  }
 };
 
 const resetIcon = () => {
@@ -106,7 +113,6 @@ const unselectFlight = () => {
   if (selectedFlight) {
     console.log('unselectFlight:' + selectedFlight.flightId);
     selectedFlight.removeFlightPath();
-
     selectedFlight = null;
   }
 };
@@ -122,7 +128,6 @@ const removeMarker = (id: string) => {
     marker.remove();
     markers.delete(id);
     iconSvgMap.delete(id);
-
     console.log('deleted flight: ' + id);
   }
 };
@@ -149,8 +154,18 @@ const updateAircaftPositions = (positions: Map<string, TerrestialPosition>) => {
 
 const updateSelectedFlightPath = async () => {
   if (selectedFlight) {
-    const positions: TerrestialPosition[] = await radarService.getPositions(selectedFlight.flightId);
-    selectedFlight.updateFlightPath(positions);
+    try {
+      const flightId = selectedFlight.flightId; // Store the ID in case it changes during async operation
+      const positions: TerrestialPosition[] = await radarService.getPositions(flightId);
+      
+      // Only update if the selected flight hasn't changed during the async call
+      if (selectedFlight && selectedFlight.flightId === flightId && positions && positions.length > 0) {
+        selectedFlight.updateFlightPath(positions);
+      }
+    } catch (error) {
+      // Network error or API issue - silently handle the error
+      // Don't remove the flight path on update errors to maintain current state
+    }
   }
 };
 
@@ -166,11 +181,26 @@ const updateMarker = (id: string, coords: HereCoordinates) => {
 };
 
 const addFlightPath = async (flightId: string) => {
-  selectedFlight = new FlightPath(flightId, map);
-  const positions: TerrestialPosition[] = await radarService.getPositions(flightId);
+  try {
+    // Make sure any previous flight is completely unselected
+    if (selectedFlight) {
+      selectedFlight.removeFlightPath();
+      selectedFlight = null;
+    }
+    
+    // Create a new flight path
+    selectedFlight = new FlightPath(flightId, map);
+    const positions: TerrestialPosition[] = await radarService.getPositions(flightId);
 
-  if (selectedFlight) {
-    selectedFlight.createFlightPath(positions);
+    if (selectedFlight && positions && positions.length > 0) {
+      selectedFlight.createFlightPath(positions);
+    }
+  } catch (error) {
+    // If there's an error fetching positions, clean up the flight path
+    if (selectedFlight) {
+      selectedFlight.removeFlightPath();
+      selectedFlight = null;
+    }
   }
 };
 
@@ -179,7 +209,6 @@ const emitFlightId = (flightId: string) => {
 };
 
 const selectFlight = (flightId: string) => {
-  console.log(`selected flight: ${flightId}`);
   unselectFlight();
 
   if (markers.has(flightId)) {

@@ -1,8 +1,35 @@
-/* eslint-disable */
+// This file contains typing for the Here Maps API
 import { TerrestialPosition } from '@/model/backendModel';
-import _ from 'lodash';
 
-declare let H: any;
+// Here Maps API interfaces
+declare let H: {
+  geo: {
+    LineString: new () => HereLineString;
+  };
+  map: {
+    Polyline: new (lineString: HereLineString, options: PolylineOptions) => HerePolyline;
+    Object: {
+      remove(): void;
+    };
+  };
+};
+
+interface HereLineString {
+  pushPoint(point: { lat: number; lng: number }): void;
+  getPointCount(): number;
+}
+
+interface PolylineOptions {
+  style: {
+    lineWidth: number;
+    strokeColor: string;
+  };
+}
+
+interface HerePolyline {
+  getGeometry(): HereLineString;
+  setGeometry(lineString: HereLineString): void;
+}
 
 export interface HereCoordinates {
   lat: number;
@@ -11,9 +38,12 @@ export interface HereCoordinates {
 }
 
 export class FlightPath {
-  private polyLine: any;
+  private polyLine: HerePolyline | null = null;
 
-  constructor(private flightIdent: string, private map: any) {}
+  constructor(
+    private flightIdent: string,
+    private map: { addObject: (obj: HerePolyline) => HerePolyline; removeObject: (obj: HerePolyline) => void },
+  ) {}
 
   public get flightId(): string {
     return this.flightIdent;
@@ -29,25 +59,15 @@ export class FlightPath {
       });
 
       this.polyLine = this.map.addObject(new H.map.Polyline(lineString, { style: { lineWidth: 2, strokeColor: 'red' } }));
-    } else {
-      console.warn(`Not enough positions (${positions.length}) for flight ${this.flightIdent}`);
     }
+    // If there are not enough positions, we simply don't create a path
   }
 
   public updateFlightPath(positions: TerrestialPosition[]) {
-    if (this.polyLine) {
-      const lineString = this.polyLine.getGeometry();
-
-      if (lineString) {
-        if (positions.length > 1 && positions.length > lineString.getPointCount()) {
-          // TODO Check whether position is not equivalent to last point in line string
-          _.forEach(_.slice(positions, lineString.getPointCount()), (pos: TerrestialPosition) => {
-            lineString.pushPoint({ lat: pos.lat, lng: pos.lon });
-          });
-
-          if (this.polyLine) this.polyLine.setGeometry(lineString);
-        }
-      }
+    // We will recreate the flight path every time instead of appending
+    // This ensures we don't have stale/duplicate position data
+    if (positions.length > 1) {
+      this.createFlightPath(positions);
     }
   }
 

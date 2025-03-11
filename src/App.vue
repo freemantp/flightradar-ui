@@ -14,21 +14,14 @@
 </template>
 
 <script>
-import { Configuration } from '@/config';
-import { defineComponent, provide } from 'vue';
-import { FlightRadarServiceImpl } from '@/services/flightRadarServiceImpl';
-import { FlightRadarServiceMock } from '@/services/flightRadarServiceMock';
+import { defineComponent } from 'vue';
 import { Tooltip } from 'bootstrap';
 
 export default defineComponent({
   name: 'App',
 
-  setup() {
-    provide('frService', Configuration.isMockData() ? new FlightRadarServiceMock() : new FlightRadarServiceImpl());
-  },
-
   mounted() {
-    //inizialize Bootstrap tooltips
+    // Initialize Bootstrap tooltips
     new Tooltip(document.body, {
       selector: "[data-bs-toggle='tooltip']",
     });

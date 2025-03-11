@@ -1,6 +1,3 @@
-//import dotenv from "dotenv";
-//dotenv.config();
-
 export class Configuration {
   static get CONFIG(): Map<string, string> {
     return new Map(
@@ -33,7 +30,7 @@ export class Configuration {
     const value = Configuration.CONFIG.get(name);
 
     if (value && value.startsWith('$VUE_APP_')) {
-      // value was not replaced, it seems we are in development.
+      // Value was not replaced, it seems we are in development.
       // Remove $ and get current value from process.env
       const envName = value.substr(1);
       const envValue = process.env[envName];
@@ -42,8 +39,10 @@ export class Configuration {
       } else {
         console.debug(`Configuration: Environment variable "${envName}" is not defined`);
       }
+      // If environment variable is not defined, return undefined
+      return undefined;
     } else {
-      // value was already replaced, it seems we are in production.
+      // Value was already replaced, it seems we are in production.
       return value;
     }
   }
