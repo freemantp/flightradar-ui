@@ -1,5 +1,5 @@
-import Axios, { AxiosResponse, AxiosRequestConfig, AxiosInstance } from 'axios';
-import { CacheRequestConfig, setupCache } from 'axios-cache-interceptor';
+import Axios, { AxiosResponse, AxiosRequestConfig } from 'axios';
+import { CacheRequestConfig, setupCache, AxiosCacheInstance } from 'axios-cache-interceptor';
 import { Flight, Aircraft, TerrestialPosition } from '@/model/backendModel';
 import { Configuration } from '@/config';
 import { FlightRadarService } from './flightRadarService';
@@ -9,7 +9,7 @@ import _ from 'lodash';
 export class FlightRadarServiceImpl implements FlightRadarService {
   private authConfig: AxiosRequestConfig;
   private apiBasepath: string;
-  private axios: AxiosInstance;
+  private axios: AxiosCacheInstance;
   private noCacheConfig: CacheRequestConfig;
   private oneSecondCacheConfig: CacheRequestConfig;
   private oneHourCacheConfig: CacheRequestConfig;

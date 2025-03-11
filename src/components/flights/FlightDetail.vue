@@ -41,8 +41,8 @@ const props = defineProps({
   flightId: String,
 });
 
-let flight = ref<Flight>();
-let aircraft = ref<Aircraft>();
+const flight = ref<Flight>();
+const aircraft = ref<Aircraft>();
 
 const frService = inject('frService') as FlightRadarService;
 
@@ -59,7 +59,7 @@ watch(
         aircraft.value = undefined;
       }
     }
-  }
+  },
 );
 
 const typeLabel = computed(() => {

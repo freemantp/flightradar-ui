@@ -41,8 +41,8 @@ export class FlightRadarServiceMock implements FlightRadarService {
             lat: 46.398228933748875,
             lon: 8.652085932337522,
           } as TerrestialPosition,
-        })
-      )
+        }),
+      ),
     );
   }
   getPositions(flightId: string): Promise<TerrestialPosition[]> {

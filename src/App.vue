@@ -15,7 +15,7 @@
 
 <script>
 import { Configuration } from '@/config';
-import { defineComponent, provide } from '@vue/runtime-core';
+import { defineComponent, provide } from 'vue';
 import { FlightRadarServiceImpl } from '@/services/flightRadarServiceImpl';
 import { FlightRadarServiceMock } from '@/services/flightRadarServiceMock';
 import { Tooltip } from 'bootstrap';

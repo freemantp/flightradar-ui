@@ -17,18 +17,18 @@ import { Flight } from '@/model/backendModel';
 import { FlightRadarService } from '../services/flightRadarService';
 import FlightlogEntry from '@/components/flights/FlightlogEntry.vue';
 
-let flights = ref<Array<Flight>>([]);
+const flights = ref<Array<Flight>>([]);
 
 const frService = inject('frService') as FlightRadarService;
 
-let intervalId = ref<ReturnType<typeof setTimeout>>();
+const intervalId = ref<ReturnType<typeof setTimeout>>();
 
-let militaryFilter = ref<boolean>(false);
+const militaryFilter = ref<boolean>(false);
 
-let loadData = async () => {
+const loadData = async () => {
   try {
     const limit = 100;
-    let filter = militaryFilter.value ? 'mil' : undefined;
+    const filter = militaryFilter.value ? 'mil' : undefined;
     flights.value = await frService.getFlights(limit, filter);
   } catch (err) {
     console.error('Could not recent flights:' + err);
@@ -47,7 +47,7 @@ onBeforeUnmount(() => {
   if (intervalId.value) clearInterval(intervalId.value);
 });
 
-let toggleBoolean = () => {
+const toggleBoolean = () => {
   militaryFilter.value = !militaryFilter.value;
 
   flights.value = [];

@@ -28,7 +28,7 @@ const props = defineProps({
 
 const frService = inject('frService') as FlightRadarService;
 
-let aircraft = ref<Aircraft>({ icao24: '' });
+const aircraft = ref<Aircraft>({ icao24: '' });
 
 onMounted(async () => {
   try {
@@ -68,8 +68,8 @@ const timestampTooltip = computed(() => {
   const lastContact = moment(props.flight.lstCntct);
   const firstContact = moment(props.flight.firstCntct);
 
-  let lastContactStr: string = getTimestampString(lastContact);
-  let firstContactStr: string = getTimestampString(firstContact);
+  const lastContactStr: string = getTimestampString(lastContact);
+  const firstContactStr: string = getTimestampString(firstContact);
 
   let tooltip = `<i class="bi bi-radar"></i> ${lastContactStr}`;
 

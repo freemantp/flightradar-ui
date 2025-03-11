@@ -10,7 +10,7 @@ export class Configuration {
         flightApiPassword: '$VUE_APP_FLIGHT_API_PASSWORD',
         hereApiKey: '$VUE_APP_HERE_API_KEY',
         mockData: '$VUE_APP_MOCK_DATA',
-      })
+      }),
     );
   }
 

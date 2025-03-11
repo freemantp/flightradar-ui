@@ -44,7 +44,7 @@ const apiKey = Configuration.value('hereApiKey');
 
 const isMobile = ref();
 
-let selectedFlight = ref<string>();
+const selectedFlight = ref<string>();
 
 onMounted(() => {
   isMobile.value = window.innerWidth < 768;
