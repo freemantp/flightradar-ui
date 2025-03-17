@@ -50,9 +50,13 @@ export class FlightPath {
   }
 
   public createFlightPath(positions: TerrestialPosition[]) {
-    this.removeFlightPath();
-
+    // Only create a new path if we have sufficient position data
     if (positions.length > 1) {
+      // Clear any existing path first
+      if (this.polyLine) {
+        this.removeFlightPath();
+      }
+
       const lineString = new H.geo.LineString();
       positions.forEach((pos: TerrestialPosition) => {
         lineString.pushPoint({ lat: pos.lat, lng: pos.lon });
@@ -73,7 +77,6 @@ export class FlightPath {
 
   public removeFlightPath(): void {
     if (this.polyLine) {
-      console.log('removeFlightPath: ' + this.flightId);
       this.map.removeObject(this.polyLine);
       this.polyLine = null;
     }

@@ -8,6 +8,10 @@ export interface FlightRadarService {
   getAircraft(icaoHexAddr: string): Promise<Aircraft>;
 
   getAircaftPositions(): Promise<Map<string, TerrestialPosition>>;
+  
+  connectPositionsWebSocket(callback: (positions: Map<string, TerrestialPosition>) => void): void;
+  
+  disconnectPositionsWebSocket(): void;
 
   getPositions(flightId: string): Promise<Array<TerrestialPosition>>;
 }

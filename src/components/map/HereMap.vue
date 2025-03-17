@@ -60,16 +60,36 @@ watch(
   }
 );
 
+watch(
+  () => props.aerialOverview,
+  (newValue) => {
+    if (newValue) {
+      // If aerial overview is enabled, connect to WebSocket
+      connectWebSocket();
+    } else {
+      // If aerial overview is disabled, disconnect from WebSocket
+      radarService.disconnectPositionsWebSocket();
+    }
+  }
+);
+
 onMounted(() => {
   initializeMap();
   map.setCenter({ lat: props.lat, lng: props.lng });
 
   updateData();
 
+  if (props.aerialOverview) {
+    connectWebSocket();
+  }
+
+  // For updates not handled by WebSocket (selected flight path)
   if (props.peridicallyRefresh) {
-    //TODO: stop update when navigating away
     intervalId.value = setInterval(() => {
-      updateData();
+      // Only update the selected flight path, since positions come via WebSocket
+      if (props.highlightedFlightId || !_.isNull(selectedFlight)) {
+        updateSelectedFlightPath();
+      }
     }, 1000);
   } else {
     if (intervalId.value) clearInterval(intervalId.value);
@@ -85,8 +105,18 @@ const updateData = () => {
   }
 };
 
+const connectWebSocket = () => {
+  // Connect to WebSocket and receive live position updates
+  radarService.connectPositionsWebSocket((positions) => {
+    if (positions) {
+      updateAircaftPositions(positions);
+    }
+  });
+};
+
 onBeforeUnmount(async () => {
   if (intervalId.value) clearInterval(intervalId.value);
+  radarService.disconnectPositionsWebSocket();
 });
 
 const loadLivePositions = async () => {
@@ -111,9 +141,9 @@ const unselectFlight = () => {
   resetIcon();
 
   if (selectedFlight) {
-    console.log('unselectFlight:' + selectedFlight.flightId);
-    selectedFlight.removeFlightPath();
-    selectedFlight = null;
+    const flightToRemove = selectedFlight;
+    selectedFlight = null; // Clear the reference first to prevent recursive cleanup
+    flightToRemove.removeFlightPath();
   }
 };
 
@@ -128,7 +158,6 @@ const removeMarker = (id: string) => {
     marker.remove();
     markers.delete(id);
     iconSvgMap.delete(id);
-    console.log('deleted flight: ' + id);
   }
 };
 
@@ -182,24 +211,46 @@ const updateMarker = (id: string, coords: HereCoordinates) => {
 
 const addFlightPath = async (flightId: string) => {
   try {
-    // Make sure any previous flight is completely unselected
-    if (selectedFlight) {
-      selectedFlight.removeFlightPath();
-      selectedFlight = null;
+    // Store reference to previous flight for cleanup
+    const previousFlight = selectedFlight;
+    
+    // Reset color of previously selected aircraft if it exists and it's different from the new selection
+    if (previousFlight && previousFlight.flightId !== flightId && markers.has(previousFlight.flightId)) {
+      markers.get(previousFlight.flightId)?.setColor(AircraftIcon.INACTIVE_COLOR);
     }
     
-    // Create a new flight path
+    // Create the new flight path object before cleaning up the old one
     selectedFlight = new FlightPath(flightId, map);
+    
+    // Clean up previous flight path AFTER creating the new one to avoid duplicate cleanup
+    if (previousFlight) {
+      previousFlight.removeFlightPath();
+    }
+    
+    // Highlight the newly selected aircraft marker
+    if (markers.has(flightId)) {
+      markers.get(flightId)?.setColor(AircraftIcon.HIGHLIGHT_COLOR);
+    }
+    
+    // Fetch and add positions for the new flight
     const positions: TerrestialPosition[] = await radarService.getPositions(flightId);
 
-    if (selectedFlight && positions && positions.length > 0) {
+    // Only try to create a path if we're still showing the same flight
+    // (User hasn't selected another during the async operation)
+    if (selectedFlight && selectedFlight.flightId === flightId && positions && positions.length > 0) {
       selectedFlight.createFlightPath(positions);
     }
   } catch (error) {
-    // If there's an error fetching positions, clean up the flight path
-    if (selectedFlight) {
-      selectedFlight.removeFlightPath();
+    // If there's an error fetching positions, clean up current selection
+    if (selectedFlight && selectedFlight.flightId === flightId) {
+      const flightToRemove = selectedFlight;
       selectedFlight = null;
+      flightToRemove.removeFlightPath();
+      
+      // Also reset the marker color since selection failed
+      if (markers.has(flightId)) {
+        markers.get(flightId)?.setColor(AircraftIcon.INACTIVE_COLOR);
+      }
     }
   }
 };
@@ -209,8 +260,11 @@ const emitFlightId = (flightId: string) => {
 };
 
 const selectFlight = (flightId: string) => {
-  unselectFlight();
-
+  // Reset color of previously selected aircraft if it exists and it's not the same as the newly selected one
+  if (selectedFlight && selectedFlight.flightId !== flightId && markers.has(selectedFlight.flightId)) {
+    markers.get(selectedFlight.flightId)?.setColor(AircraftIcon.INACTIVE_COLOR);
+  }
+  
   if (markers.has(flightId)) {
     markers.get(flightId)?.setColor(AircraftIcon.HIGHLIGHT_COLOR);
   }
