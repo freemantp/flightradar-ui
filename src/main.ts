@@ -15,7 +15,9 @@ if (Configuration.isMockData()) {
   frService = new FlightRadarServiceMock();
 } else {
   // Using real API mode
-  frService = new FlightRadarServiceImpl();
+  const frServiceImpl = new FlightRadarServiceImpl();
+  frServiceImpl.connectWebsocket();
+  frService = frServiceImpl;
 }
 
 // Create the Vue app

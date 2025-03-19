@@ -39,6 +39,8 @@ export interface HereCoordinates {
 
 export class FlightPath {
   private polyLine: HerePolyline | null = null;
+  private pathSegments: HerePolyline[] = [];
+  private readonly MAX_ALTITUDE = 50000; // Maximum altitude in feet
 
   constructor(
     private flightIdent: string,
@@ -49,20 +51,61 @@ export class FlightPath {
     return this.flightIdent;
   }
 
+  /**
+   * Get color based on altitude - red (0 feet) to blue (50,000 feet)
+   * @param altitude Altitude in feet
+   * @returns Color in hex format
+   */
+  private getColorByAltitude(altitude = 0): string {
+    // Clamp altitude between 0 and MAX_ALTITUDE
+    const clampedAlt = Math.max(0, Math.min(altitude, this.MAX_ALTITUDE));
+    // Calculate normalized ratio (0 to 1)
+    const ratio = clampedAlt / this.MAX_ALTITUDE;
+
+    // Red component decreases with altitude (255 to 0)
+    const r = Math.round(255 * (1 - ratio));
+    // Blue component increases with altitude (0 to 255)
+    const b = Math.round(255 * ratio);
+    // Green can be adjusted as needed - using 0 for a pure red-to-blue scale
+    const g = 0;
+
+    // Return hex color
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  }
+
   public createFlightPath(positions: TerrestialPosition[]) {
     // Only create a new path if we have sufficient position data
     if (positions.length > 1) {
       // Clear any existing path first
-      if (this.polyLine) {
+      if (this.polyLine || this.pathSegments.length > 0) {
         this.removeFlightPath();
       }
 
-      const lineString = new H.geo.LineString();
-      positions.forEach((pos: TerrestialPosition) => {
-        lineString.pushPoint({ lat: pos.lat, lng: pos.lon });
-      });
+      // Create segments between each pair of positions
+      for (let i = 0; i < positions.length - 1; i++) {
+        const currentPos = positions[i];
+        const nextPos = positions[i + 1];
 
-      this.polyLine = this.map.addObject(new H.map.Polyline(lineString, { style: { lineWidth: 2, strokeColor: 'red' } }));
+        // Calculate average altitude for the segment
+        const avgAltitude = ((currentPos.alt || 0) + (nextPos.alt || 0)) / 2;
+
+        // Create line segment with color based on altitude
+        const lineString = new H.geo.LineString();
+        lineString.pushPoint({ lat: currentPos.lat, lng: currentPos.lon });
+        lineString.pushPoint({ lat: nextPos.lat, lng: nextPos.lon });
+
+        // Create and track the segment
+        const segment = new H.map.Polyline(lineString, {
+          style: {
+            lineWidth: 3,
+            strokeColor: this.getColorByAltitude(avgAltitude),
+          },
+        });
+
+        // Add segment to map and track it
+        this.map.addObject(segment);
+        this.pathSegments.push(segment);
+      }
     }
     // If there are not enough positions, we simply don't create a path
   }
@@ -71,11 +114,18 @@ export class FlightPath {
     // We will recreate the flight path every time instead of appending
     // This ensures we don't have stale/duplicate position data
     if (positions.length > 1) {
+      this.removeFlightPath(); // Clear all segments first
       this.createFlightPath(positions);
     }
   }
 
   public removeFlightPath(): void {
+    // Remove all path segments
+    this.pathSegments.forEach((segment) => {
+      this.map.removeObject(segment);
+    });
+    this.pathSegments = [];
+
     if (this.polyLine) {
       this.map.removeObject(this.polyLine);
       this.polyLine = null;
