@@ -7,18 +7,21 @@ import { FlightRadarServiceMock } from './services/flightRadarServiceMock';
 import { Configuration } from './config';
 
 // Choose the appropriate service implementation based on configuration
-let frService: FlightRadarService;
+let baseService: FlightRadarService;
 
 // Choose the appropriate service implementation
 if (Configuration.isMockData()) {
   // Using mock data mode
-  frService = new FlightRadarServiceMock();
+  baseService = new FlightRadarServiceMock();
 } else {
   // Using real API mode
   const frServiceImpl = new FlightRadarServiceImpl();
   frServiceImpl.connectWebsocket();
-  frService = frServiceImpl;
+  baseService = frServiceImpl;
 }
+
+// Wrap the base service with the adapter to ensure compatibility
+const frService = baseService;
 
 // Create the Vue app
 const app = createApp(App);

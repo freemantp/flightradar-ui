@@ -87,7 +87,6 @@ export class AircraftMarker {
   public updatePosition(coords: HereCoordinates) {
     this.marker.setGeometry(coords);
 
-    //TODO: if heading is not available, get it from last points of flight path
     if (this.iconSvgMap.has(this.flightId) && coords.heading != null) {
       const svgElement = this.iconSvgMap.get(this.flightId);
       if (svgElement) {

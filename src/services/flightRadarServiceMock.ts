@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { FlightRadarService } from './flightRadarService';
+import { Observable, of, from, Subject, BehaviorSubject, ReplaySubject } from 'rxjs';
+import { map, delay, finalize } from 'rxjs/operators';
 
 import { Aircraft, Flight, TerrestialPosition } from '@/model/backendModel';
 
@@ -18,8 +20,11 @@ export class FlightRadarServiceMock implements FlightRadarService {
   private mockPositions: Map<string, TerrestialPosition & { lastUpdate: number }> = new Map();
 
   private flightWsIntervals: Map<string, number> = new Map();
+  private flightPositionSubjects: Map<string, ReplaySubject<Array<TerrestialPosition>>> = new Map();
+  private positionsSubject: BehaviorSubject<Map<string, TerrestialPosition>> | null = null;
+  private flightPositionsCallbacks: Map<string, Set<(positions: Array<TerrestialPosition>) => void>> = new Map();
 
-  getFlights(numEntries: number, filter?: string): Promise<Flight[]> {
+  getFlights(numEntries: number, filter?: string): Observable<Flight[]> {
     // Generate mock flights
     const flights: Flight[] = [
       {
@@ -62,13 +67,13 @@ export class FlightRadarServiceMock implements FlightRadarService {
     // Apply filter if specified
     if (filter === 'mil') {
       // Just return an empty list for mock data with military filter
-      return Promise.resolve([]);
+      return of([]).pipe(delay(100));
     }
 
     // Limit the number of entries as requested
-    return Promise.resolve(flights.slice(0, numEntries));
+    return of(flights.slice(0, numEntries)).pipe(delay(100));
   }
-  getFlight(id: string): Promise<Flight> {
+  getFlight(id: string): Observable<Flight> {
     // Mock flights by ID
     const flightMap: Record<string, Flight> = {
       '123456': {
@@ -95,7 +100,7 @@ export class FlightRadarServiceMock implements FlightRadarService {
     };
 
     // Return the requested flight or a default
-    return Promise.resolve(
+    return of(
       flightMap[id] ||
         ({
           id: id,
@@ -104,10 +109,10 @@ export class FlightRadarServiceMock implements FlightRadarService {
           lstCntct: new Date(),
           firstCntct: new Date(Date.now() - 3600000),
         } as Flight),
-    );
+    ).pipe(delay(100));
   }
 
-  getAircraft(icaoHexAddr: string): Promise<Aircraft> {
+  getAircraft(icaoHexAddr: string): Observable<Aircraft | null> {
     // Mock aircraft data by ICAO address
     const aircraftMap: Record<string, Aircraft> = {
       '4b1617': {
@@ -134,7 +139,7 @@ export class FlightRadarServiceMock implements FlightRadarService {
     };
 
     // Return the requested aircraft or a default
-    return Promise.resolve(
+    return of(
       aircraftMap[icaoHexAddr] ||
         ({
           icao24: icaoHexAddr,
@@ -143,55 +148,12 @@ export class FlightRadarServiceMock implements FlightRadarService {
           reg: 'REG-' + icaoHexAddr.toUpperCase(),
           op: 'Mock Airlines',
         } as Aircraft),
-    );
-  }
-  getAircaftPositions(): Promise<Map<string, TerrestialPosition>> {
-    // Create a new map with realistic positions and rotate to simulate movement
-    const result = new Map<string, TerrestialPosition>();
-
-    // Add live positions for different flights
-    result.set('123456', {
-      icao: '4b1617',
-      callsign: 'SWR756C',
-      lat: 47.02075 + Math.random() * 0.01,
-      lon: 7.33998 + Math.random() * 0.01,
-      track: 45 + Math.random() * 10,
-      alt: 35000,
-    });
-
-    result.set('234567', {
-      icao: '76ceef',
-      callsign: 'SIA346',
-      lat: 46.96185 + Math.random() * 0.01,
-      lon: 7.4429 + Math.random() * 0.01,
-      track: 90 + Math.random() * 10,
-      alt: 30000,
-    });
-
-    result.set('345678', {
-      icao: '440172',
-      callsign: 'EJU4319',
-      lat: 46.9149 + Math.random() * 0.01,
-      lon: 7.4962 + Math.random() * 0.01,
-      track: 180 + Math.random() * 10,
-      alt: 25000,
-    });
-
-    result.set('456789', {
-      icao: 'a1b2c3',
-      callsign: 'BAW123',
-      lat: 47.12075 + Math.random() * 0.01,
-      lon: 7.45998 + Math.random() * 0.01,
-      track: 270 + Math.random() * 10,
-      alt: 20000,
-    });
-
-    return Promise.resolve(result);
+    ).pipe(delay(100));
   }
 
-  getPositions(flightId: string): Promise<TerrestialPosition[]> {
+  getPositions(flightId: string): Observable<TerrestialPosition[]> {
     // Return specific flight path or default
-    return Promise.resolve(this.flightPaths[flightId] || this.pos);
+    return of(this.flightPaths[flightId] || this.pos).pipe(delay(100));
   }
 
   registerPositionsCallback(callback: (positions: Map<string, TerrestialPosition>) => void): void {
@@ -258,6 +220,12 @@ export class FlightRadarServiceMock implements FlightRadarService {
 
     // Clear stored positions
     this.mockPositions.clear();
+
+    // Complete any observables
+    if (this.positionsSubject) {
+      this.positionsSubject.complete();
+      this.positionsSubject = null;
+    }
   }
 
   private initializeMockPositions(timestamp: number): void {
@@ -386,14 +354,35 @@ export class FlightRadarServiceMock implements FlightRadarService {
   }
 
   registerFlightPositionsCallback(flightId: string, callback: (positions: Array<TerrestialPosition>) => void): void {
-    this.disconnectFlightPositionsWebSocket(flightId);
+    if (!this.flightPositionsCallbacks.has(flightId)) {
+      this.flightPositionsCallbacks.set(flightId, new Set());
+    }
 
-    this.getPositions(flightId).then((positions) => {
-      // Send initial data
-      callback(positions);
+    // eslint-disable-next-line
+    const callbacks = this.flightPositionsCallbacks.get(flightId)!;
+
+    callbacks.add(callback);
+
+    if (this.flightWsIntervals.has(flightId)) {
+      return;
+    }
+
+    this.getPositions(flightId).subscribe((positions) => {
+      const callbacksSet = this.flightPositionsCallbacks.get(flightId);
+      if (!callbacksSet || callbacksSet.size === 0) {
+        return;
+      }
+
+      callbacksSet.forEach((cb) => cb(positions));
 
       const intervalId = window.setInterval(() => {
         const existingPositions = this.flightPaths[flightId] || this.pos;
+
+        const currentCallbacks = this.flightPositionsCallbacks.get(flightId);
+        if (!currentCallbacks || currentCallbacks.size === 0) {
+          this.disconnectFlightPositionsWebSocket(flightId);
+          return;
+        }
 
         // Modify positions slightly to simulate movement
         const updatedPositions = existingPositions.map((pos) => ({
@@ -417,19 +406,93 @@ export class FlightRadarServiceMock implements FlightRadarService {
 
         this.flightPaths[flightId] = updatedPositions;
 
-        callback(updatedPositions);
+        // Notify all callbacks
+        currentCallbacks.forEach((cb) => cb(updatedPositions));
       }, 2000);
 
       this.flightWsIntervals.set(flightId, intervalId);
     });
   }
 
+  /**
+   * Removes a specific callback for a flight's position updates.
+   * Only disconnects the WebSocket when no callbacks remain.
+   * @param flightId The flight ID
+   * @param callback The callback to remove (optional). If not provided, all callbacks will be removed.
+   */
+  removeFlightPositionCallback(flightId: string, callback?: (positions: Array<TerrestialPosition>) => void): void {
+    const callbacks = this.flightPositionsCallbacks.get(flightId);
+
+    if (!callbacks) {
+      return;
+    }
+
+    if (callback) {
+      callbacks.delete(callback);
+    } else {
+      callbacks.clear();
+    }
+
+    if (callbacks.size === 0) {
+      this.disconnectFlightPositionsWebSocket(flightId);
+    }
+  }
+
   disconnectFlightPositionsWebSocket(flightId: string): void {
+    this.flightPositionsCallbacks.delete(flightId);
+
     const intervalId = this.flightWsIntervals.get(flightId);
     if (intervalId !== undefined) {
       window.clearInterval(intervalId);
       this.flightWsIntervals.delete(flightId);
     }
+
+    const subject = this.flightPositionSubjects.get(flightId);
+    if (subject) {
+      subject.complete();
+      this.flightPositionSubjects.delete(flightId);
+    }
+  }
+
+  observePositions(): Observable<Map<string, TerrestialPosition>> {
+    if (!this.positionsSubject) {
+      this.positionsSubject = new BehaviorSubject<Map<string, TerrestialPosition>>(this.getCurrentPositions());
+
+      this.registerPositionsCallback((positions) => {
+        this.positionsSubject?.next(positions);
+      });
+    }
+
+    return this.positionsSubject.asObservable();
+  }
+
+  observeFlightPositions(flightId: string): Observable<Array<TerrestialPosition>> {
+    if (!this.flightPositionSubjects.has(flightId)) {
+      const subject = new ReplaySubject<Array<TerrestialPosition>>(1);
+      this.flightPositionSubjects.set(flightId, subject);
+
+      const callback = (positions: Array<TerrestialPosition>) => {
+        const subj = this.flightPositionSubjects.get(flightId);
+        if (subj) {
+          subj.next(positions);
+        }
+      };
+
+      this.registerFlightPositionsCallback(flightId, callback);
+
+      return subject.asObservable().pipe(
+        finalize(() => {
+          const subj = this.flightPositionSubjects.get(flightId);
+          if (subj) {
+            this.flightPositionSubjects.delete(flightId);
+            this.removeFlightPositionCallback(flightId, callback);
+          }
+        }),
+      );
+    }
+
+    // eslint-disable-next-line
+    return this.flightPositionSubjects.get(flightId)!.asObservable();
   }
 
   private flightPaths: Record<string, TerrestialPosition[]> = {

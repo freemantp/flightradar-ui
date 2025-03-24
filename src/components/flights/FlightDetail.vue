@@ -13,7 +13,7 @@
         <DetailField label="Registraton" :text="aircraft ? aircraft.reg : null" />
       </div>
       <div class="col">
-        <DetailField label="24 bit address" :text="flight ? flight.icao24.toUpperCase() : null" />
+        <DetailField label="24 bit address" :text="flight && flight.icao24 ? flight.icao24.toUpperCase() : null" />
       </div>
     </div>
     <div class="row">
@@ -24,7 +24,7 @@
         <DetailField label="Operator" :text="aircraft ? aircraft.op : null" />
       </div>
     </div>
-    <div class="row">
+    <div class="row" v-if="currentAltitude">
       <div class="col">
         <DetailField label="Current Altitude" :text="currentAltitude" />
       </div>
@@ -52,10 +52,59 @@ let currentFlightId: string | null = null;
 
 const frService = inject('frService') as FlightRadarService;
 
+// Set up WebSocket for position updates
+const setupPositionWebSocket = (flightId: string) => {
+  frService.registerFlightPositionsCallback(flightId, (positions: Array<TerrestialPosition>) => {
+    // Only update if this is still the selected flight
+    if (props.flightId === flightId && positions && positions.length > 0) {
+      // Always use the most recent position from the array
+      const latestPosition = positions[positions.length - 1];
+      if (latestPosition && latestPosition.alt !== undefined) {
+        currentPosition.value = latestPosition;
+      }
+    }
+  });
+};
+
+const updateCurrentPosition = () => {
+  if (!props.flightId) return;
+
+  const requestedFlightId = props.flightId;
+
+  try {
+    // First check if we have a live position from the main WebSocket
+    const livePosition = frService.getCurrentPosition(requestedFlightId);
+
+    // Only update if this is still the selected flight
+    if (props.flightId === requestedFlightId && livePosition && livePosition.alt !== undefined) {
+      currentPosition.value = livePosition;
+      return;
+    }
+
+    // Fallback: try to get historical positions if live data doesn't have altitude
+    frService.getPositions(requestedFlightId).subscribe({
+      next: (positions) => {
+        // Only update if this is still the selected flight
+        if (props.flightId === requestedFlightId && positions && positions.length > 0) {
+          const latestPosition = positions[positions.length - 1];
+
+          if (latestPosition && latestPosition.alt !== undefined) {
+            currentPosition.value = latestPosition;
+          }
+        }
+      },
+      error: (error) => {
+        console.error('Error fetching current position:', error);
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching current position:', error);
+  }
+};
+
 watch(
   () => props.flightId,
-  // eslint-disable-next-line
-  async (newValue, oldValue) => {
+  (newValue, _oldValue) => {
     // Clear current position when changing flights
     currentPosition.value = null;
 
@@ -70,21 +119,36 @@ watch(
       flight.value = undefined;
       aircraft.value = undefined;
 
-      // Fetch new flight data
-      flight.value = await frService.getFlight(newValue);
-      try {
-        aircraft.value = await frService.getAircraft(flight.value.icao24);
+      // Fetch new flight data using observables
+      frService.getFlight(newValue).subscribe({
+        next: (flightData) => {
+          flight.value = flightData;
 
-        // Set up WebSocket for position updates
-        currentFlightId = newValue;
-        setupPositionWebSocket(newValue);
+          if (flightData && flightData.icao24) {
+            // Once we have the flight, get the aircraft data
+            frService.getAircraft(flightData.icao24).subscribe({
+              next: (aircraftData) => {
+                aircraft.value = aircraftData;
 
-        // Get the current position (might be available immediately)
-        updateCurrentPosition();
-      } catch (err) {
-        console.error(err);
-        aircraft.value = undefined;
-      }
+                // Set up WebSocket for position updates
+                currentFlightId = newValue;
+                setupPositionWebSocket(newValue);
+
+                // Get the current position (might be available immediately)
+                updateCurrentPosition();
+              },
+              error: (err) => {
+                console.error(err);
+                aircraft.value = undefined;
+              },
+            });
+          }
+        },
+        error: (err) => {
+          console.error(err);
+          flight.value = undefined;
+        },
+      });
     }
   },
 );
@@ -121,62 +185,12 @@ onBeforeUnmount(() => {
   }
 });
 
-// Set up WebSocket for position updates
-const setupPositionWebSocket = (flightId: string) => {
-  frService.registerFlightPositionsCallback(flightId, (positions: Array<TerrestialPosition>) => {
-    // Only update if this is still the selected flight
-    if (props.flightId === flightId && positions && positions.length > 0) {
-      // Always use the most recent position from the array
-      const latestPosition = positions[positions.length - 1];
-      if (latestPosition && latestPosition.alt !== undefined) {
-        currentPosition.value = latestPosition;
-      }
-    }
-  });
-};
-
-const updateCurrentPosition = async () => {
-  if (!props.flightId) return;
-
-  const requestedFlightId = props.flightId;
-
-  try {
-    // First check if we have a live position from the main WebSocket
-    const livePosition = frService.getCurrentPosition(requestedFlightId);
-
-    // Only update if this is still the selected flight
-    if (props.flightId === requestedFlightId && livePosition && livePosition.alt !== undefined) {
-      currentPosition.value = livePosition;
-      return;
-    }
-
-    // Fallback: try to get historical positions if live data doesn't have altitude
-    const positions = await frService.getPositions(requestedFlightId);
-
-    // Only update if this is still the selected flight (could have changed during the async call)
-    if (props.flightId === requestedFlightId && positions && positions.length > 0) {
-      const latestPosition = positions[positions.length - 1];
-
-      if (latestPosition && latestPosition.alt !== undefined) {
-        currentPosition.value = latestPosition;
-        return;
-      }
-    }
-  } catch (error) {
-    console.error('Error fetching current position:', error);
-  }
-};
-
 const currentAltitude = computed(() => {
-  if (!currentPosition.value) {
-    return 'N/A';
+  if (currentPosition?.value?.alt !== undefined && currentPosition.value.alt !== null && currentPosition.value.alt >= 0) {
+    return `${currentPosition.value?.alt.toLocaleString()} ft`;
   }
 
-  if (currentPosition.value.alt !== undefined && currentPosition.value.alt !== null) {
-    return `${currentPosition.value.alt.toLocaleString()} ft`;
-  }
-
-  return 'N/A';
+  return undefined;
 });
 
 const typeLabel = computed(() => {

@@ -23,6 +23,7 @@ interface PolylineOptions {
   style: {
     lineWidth: number;
     strokeColor: string;
+    lineDash?: number[];
   };
 }
 
@@ -41,6 +42,9 @@ export class FlightPath {
   private polyLine: HerePolyline | null = null;
   private pathSegments: HerePolyline[] = [];
   private readonly MAX_ALTITUDE = 50000; // Maximum altitude in feet
+  private readonly LARGE_GAP_THRESHOLD = 5; // Threshold in nautical miles
+  private readonly EARTH_RADIUS_NM = 3440.065; // Earth radius in nautical miles
+  private readonly MEDIUM_GRAY_COLOR = '#505050'; // Medium gray color for large gaps
 
   constructor(
     private flightIdent: string,
@@ -49,6 +53,32 @@ export class FlightPath {
 
   public get flightId(): string {
     return this.flightIdent;
+  }
+
+  /**
+   * Calculate the great-circle distance between two points in nautical miles
+   * using the Haversine formula
+   * @param lat1 Latitude of first point in degrees
+   * @param lon1 Longitude of first point in degrees
+   * @param lat2 Latitude of second point in degrees
+   * @param lon2 Longitude of second point in degrees
+   * @returns Distance in nautical miles
+   */
+  private calculateDistanceNM(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    // Convert to radians
+    const lat1Rad = (lat1 * Math.PI) / 180;
+    const lon1Rad = (lon1 * Math.PI) / 180;
+    const lat2Rad = (lat2 * Math.PI) / 180;
+    const lon2Rad = (lon2 * Math.PI) / 180;
+
+    // Haversine formula
+    const dLat = lat2Rad - lat1Rad;
+    const dLon = lon2Rad - lon1Rad;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    // Distance in nautical miles
+    return this.EARTH_RADIUS_NM * c;
   }
 
   /**
@@ -86,21 +116,29 @@ export class FlightPath {
         const currentPos = positions[i];
         const nextPos = positions[i + 1];
 
+        // Calculate distance between points in nautical miles
+        const distanceNM = this.calculateDistanceNM(currentPos.lat, currentPos.lon, nextPos.lat, nextPos.lon);
+
+        // Determine if this is a large gap
+        const isLargeGap = distanceNM >= this.LARGE_GAP_THRESHOLD;
+
         // Calculate average altitude for the segment
         const avgAltitude = ((currentPos.alt || 0) + (nextPos.alt || 0)) / 2;
 
-        // Create line segment with color based on altitude
+        // Create line segment with color based on altitude or gray if large gap
         const lineString = new H.geo.LineString();
         lineString.pushPoint({ lat: currentPos.lat, lng: currentPos.lon });
         lineString.pushPoint({ lat: nextPos.lat, lng: nextPos.lon });
 
+        // Configure style based on whether this is a large gap
+        const style: PolylineOptions['style'] = {
+          lineWidth: 3,
+          strokeColor: isLargeGap ? this.MEDIUM_GRAY_COLOR : this.getColorByAltitude(avgAltitude),
+          ...(isLargeGap ? { lineDash: [4, 4] } : {}), // 4px dash, 4px gap for large gaps
+        };
+
         // Create and track the segment
-        const segment = new H.map.Polyline(lineString, {
-          style: {
-            lineWidth: 3,
-            strokeColor: this.getColorByAltitude(avgAltitude),
-          },
-        });
+        const segment = new H.map.Polyline(lineString, { style });
 
         // Add segment to map and track it
         this.map.addObject(segment);

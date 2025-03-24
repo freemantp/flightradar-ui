@@ -1,5 +1,6 @@
 import { FlightRadarService } from '@/services/flightRadarService';
 import { TerrestialPosition } from '@/model/backendModel';
+import { firstValueFrom } from 'rxjs';
 
 type TerrPosArray = Array<TerrestialPosition>;
 
@@ -11,8 +12,7 @@ export class FlightDataServiceImp {
   constructor(private frService: FlightRadarService) {}
 
   public getFlightPositions(flightId: string): Promise<TerrPosArray> {
-    this.frService.getPositions(flightId).then();
-
-    return Promise.resolve([]);
+    // Convert Observable to Promise
+    return firstValueFrom(this.frService.getPositions(flightId));
   }
 }

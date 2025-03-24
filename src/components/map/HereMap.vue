@@ -107,11 +107,6 @@ const loadLivePositions = async () => {
   const positions = radarService.getCurrentPositions();
   if (positions && positions.size > 0) {
     updateAircaftPositions(positions);
-  } else {
-    const fallbackPositions = await radarService.getAircaftPositions();
-    if (fallbackPositions) {
-      updateAircaftPositions(fallbackPositions);
-    }
   }
 };
 
@@ -153,13 +148,68 @@ const removeMarker = (id: string) => {
   }
 };
 
-const convertToHereCoords = (flPos: TerrestialPosition): HereCoordinates => {
-  return { lat: Number(flPos.lat), lng: Number(flPos.lon), heading: flPos.track } as HereCoordinates;
+/**
+ * Calculate the bearing/heading from one point to another in degrees (0-360)
+ * @param lat1 Latitude of first point in degrees
+ * @param lon1 Longitude of first point in degrees
+ * @param lat2 Latitude of second point in degrees
+ * @param lon2 Longitude of second point in degrees
+ * @returns Heading in degrees (0-360)
+ */
+const calculateHeading = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  // Convert to radians
+  const lat1Rad = (lat1 * Math.PI) / 180;
+  const lon1Rad = (lon1 * Math.PI) / 180;
+  const lat2Rad = (lat2 * Math.PI) / 180;
+  const lon2Rad = (lon2 * Math.PI) / 180;
+  
+  // Calculate heading
+  const y = Math.sin(lon2Rad - lon1Rad) * Math.cos(lat2Rad);
+  const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+            Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(lon2Rad - lon1Rad);
+  let heading = Math.atan2(y, x) * 180 / Math.PI;
+  
+  // Normalize to 0-360
+  heading = (heading + 360) % 360;
+  
+  return heading;
+};
+
+const convertToHereCoords = (flPos: TerrestialPosition, positions?: Map<string, TerrestialPosition>): HereCoordinates => {
+  // If track/heading is available, use it directly
+  if (flPos.track !== undefined) {
+    return { lat: Number(flPos.lat), lng: Number(flPos.lon), heading: flPos.track } as HereCoordinates;
+  }
+  
+  // If we have positions and can find previous positions for the same flight, calculate heading
+  if (positions && flPos.icao) {
+    // Try to find the previous position for this aircraft
+    const positionEntries = Array.from(positions.entries());
+    
+    // Look through previous positions to find one with the same ICAO
+    for (let i = positionEntries.length - 1; i >= 0; i--) {
+      const [_, prevPos] = positionEntries[i];
+      if (prevPos.icao === flPos.icao && 
+          (prevPos.lat !== flPos.lat || prevPos.lon !== flPos.lon)) {
+        // Found a previous position for this aircraft that's different from current
+        const heading = calculateHeading(
+          prevPos.lat, 
+          prevPos.lon, 
+          flPos.lat, 
+          flPos.lon
+        );
+        return { lat: Number(flPos.lat), lng: Number(flPos.lon), heading } as HereCoordinates;
+      }
+    }
+  }
+  
+  // If no track/heading available and can't calculate, default to 0
+  return { lat: Number(flPos.lat), lng: Number(flPos.lon), heading: 0 } as HereCoordinates;
 };
 
 const updateAircaftPositions = (positions: Map<string, TerrestialPosition>) => {
   positions.forEach((pos: TerrestialPosition, flightId: string) => {
-    updateMarker(flightId, convertToHereCoords(pos));
+    updateMarker(flightId, convertToHereCoords(pos, positions));
   });
 
   const now = moment();

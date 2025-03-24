@@ -1,25 +1,28 @@
 import { Flight, Aircraft, TerrestialPosition } from '@/model/backendModel';
+import { Observable } from 'rxjs';
 
 export interface FlightRadarService {
-  getFlights(numEntries: number, filter?: string): Promise<Array<Flight>>;
+  getFlights(numEntries: number, filter?: string): Observable<Array<Flight>>;
 
-  getFlight(id: string): Promise<Flight>;
+  getFlight(id: string): Observable<Flight>;
 
-  getAircraft(icaoHexAddr: string): Promise<Aircraft>;
-
-  // For compatibility - consider deprecating in favor of direct position access
-  getAircaftPositions(): Promise<Map<string, TerrestialPosition>>;
+  getAircraft(icaoHexAddr: string): Observable<Aircraft|null>;
 
   // WebSocket methods for live position data
-  registerPositionsCallback(callback: (positions: Map<string, TerrestialPosition>) => void): void;
+  observePositions(): Observable<Map<string, TerrestialPosition>>;
   disconnectPositionsWebSocket(): void;
 
-  registerFlightPositionsCallback(flightId: string, callback: (positions: Array<TerrestialPosition>) => void): void;
+  observeFlightPositions(flightId: string): Observable<Array<TerrestialPosition>>;
   disconnectFlightPositionsWebSocket(flightId: string): void;
+
+  // Legacy callback methods for compatibility
+  registerPositionsCallback(callback: (positions: Map<string, TerrestialPosition>) => void): void;
+  registerFlightPositionsCallback(flightId: string, callback: (positions: Array<TerrestialPosition>) => void): void;
+  removeFlightPositionCallback(flightId: string, callback?: (positions: Array<TerrestialPosition>) => void): void;
 
   getCurrentPositions(): Map<string, TerrestialPosition>;
 
   getCurrentPosition(flightId: string): TerrestialPosition | null;
 
-  getPositions(flightId: string): Promise<Array<TerrestialPosition>>;
+  getPositions(flightId: string): Observable<Array<TerrestialPosition>>;
 }
