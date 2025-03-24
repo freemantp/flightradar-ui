@@ -94,7 +94,13 @@ const updateData = () => {
 
 onBeforeUnmount(async () => {
   if (intervalId.value) clearInterval(intervalId.value);
+  
   radarService.disconnectPositionsWebSocket();
+  
+  for (const flightId of flightPositionCallbacks.keys()) {
+    radarService.disconnectFlightPositionsWebSocket(flightId);
+  }
+  flightPositionCallbacks.clear();
 });
 
 const loadLivePositions = async () => {
@@ -119,6 +125,14 @@ const unselectFlight = () => {
   resetIcon();
 
   if (selectedFlight) {
+    const flightId = selectedFlight.flightId;
+    
+    // Disconnect from WebSocket if connected
+    if (flightPositionCallbacks.has(flightId)) {
+      radarService.disconnectFlightPositionsWebSocket(flightId);
+      flightPositionCallbacks.delete(flightId);
+    }
+    
     const flightToRemove = selectedFlight;
     selectedFlight = null; // Clear the reference first to prevent recursive cleanup
     flightToRemove.removeFlightPath();
@@ -159,8 +173,13 @@ const updateAircaftPositions = (positions: Map<string, TerrestialPosition>) => {
   }
 };
 
+// Map to store flight position callbacks
+const flightPositionCallbacks = new Map<string, (positions: TerrestialPosition[]) => void>();
+
 const updateSelectedFlightPath = async () => {
-  if (selectedFlight) {
+  // This function is kept for compatibility with the interval-based approach
+  // but it's not actively used for WebSocket-connected flights
+  if (selectedFlight && !flightPositionCallbacks.has(selectedFlight.flightId)) {
     try {
       const flightId = selectedFlight.flightId;
       const positions: TerrestialPosition[] = await radarService.getPositions(flightId);
@@ -190,10 +209,15 @@ const updateMarker = (id: string, coords: HereCoordinates) => {
 const addFlightPath = async (flightId: string) => {
   try {
     const previousFlight = selectedFlight;
-
-    // Reset color of previously selected aircraft if it exists and it's different from the new selection
-    if (previousFlight && previousFlight.flightId !== flightId && markers.has(previousFlight.flightId)) {
-      markers.get(previousFlight.flightId)?.setColor(AircraftIcon.INACTIVE_COLOR);
+    if (previousFlight && previousFlight.flightId !== flightId) {
+      if (flightPositionCallbacks.has(previousFlight.flightId)) {
+        radarService.disconnectFlightPositionsWebSocket(previousFlight.flightId);
+        flightPositionCallbacks.delete(previousFlight.flightId);
+      }
+      
+      if (markers.has(previousFlight.flightId)) {
+        markers.get(previousFlight.flightId)?.setColor(AircraftIcon.INACTIVE_COLOR);
+      }
     }
 
     // Create the new flight path object before cleaning up the old one
@@ -209,16 +233,20 @@ const addFlightPath = async (flightId: string) => {
       markers.get(flightId)?.setColor(AircraftIcon.HIGHLIGHT_COLOR);
     }
 
-    // Fetch and add positions for the new flight
-    const positions: TerrestialPosition[] = await radarService.getPositions(flightId);
-
-    // Only try to create a path if we're still showing the same flight
-    // (User hasn't selected another during the async operation)
-    if (selectedFlight && selectedFlight.flightId === flightId && positions && positions.length > 0) {
-      selectedFlight.createFlightPath(positions);
-    }
+    const positionsCallback = (positions: TerrestialPosition[]) => {
+      // Only update if this is still the selected flight
+      if (selectedFlight && selectedFlight.flightId === flightId && positions && positions.length > 0) {
+        selectedFlight.updateFlightPath(positions);
+      }
+    };
+    
+    flightPositionCallbacks.set(flightId, positionsCallback);
+    radarService.registerFlightPositionsCallback(flightId, positionsCallback);
+    
+    // Initial positions will come through the WebSocket
   } catch (error) {
-    // If there's an error fetching positions, clean up current selection
+    console.error('Error setting up flight path:', error);
+    // If there's an error, clean up current selection
     if (selectedFlight && selectedFlight.flightId === flightId) {
       const flightToRemove = selectedFlight;
       selectedFlight = null;
@@ -227,6 +255,11 @@ const addFlightPath = async (flightId: string) => {
       // Also reset the marker color since selection failed
       if (markers.has(flightId)) {
         markers.get(flightId)?.setColor(AircraftIcon.INACTIVE_COLOR);
+      }
+      
+      if (flightPositionCallbacks.has(flightId)) {
+        radarService.disconnectFlightPositionsWebSocket(flightId);
+        flightPositionCallbacks.delete(flightId);
       }
     }
   }

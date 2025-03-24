@@ -17,6 +17,8 @@ export class FlightRadarServiceMock implements FlightRadarService {
   private cleanupIntervalId: number | null = null;
   private mockPositions: Map<string, TerrestialPosition & { lastUpdate: number }> = new Map();
 
+  private flightWsIntervals: Map<string, number> = new Map();
+
   getFlights(numEntries: number, filter?: string): Promise<Flight[]> {
     // Generate mock flights
     const flights: Flight[] = [
@@ -188,26 +190,8 @@ export class FlightRadarServiceMock implements FlightRadarService {
   }
 
   getPositions(flightId: string): Promise<TerrestialPosition[]> {
-    // Create flight paths with multiple points
-    const flightPaths: Record<string, TerrestialPosition[]> = {
-      '123456': [
-        { icao: '4b1617', callsign: 'SWR756C', lat: 47.02075, lon: 7.33998, track: 45, alt: 35000 },
-        { icao: '4b1617', callsign: 'SWR756C', lat: 47.03075, lon: 7.34998, track: 45, alt: 35000 },
-        { icao: '4b1617', callsign: 'SWR756C', lat: 47.04075, lon: 7.35998, track: 45, alt: 35000 },
-        { icao: '4b1617', callsign: 'SWR756C', lat: 47.05075, lon: 7.36998, track: 45, alt: 35000 },
-        { icao: '4b1617', callsign: 'SWR756C', lat: 47.06075, lon: 7.37998, track: 45, alt: 35000 },
-      ],
-      '234567': [
-        { icao: '76ceef', callsign: 'SIA346', lat: 46.96185, lon: 7.4429, track: 90, alt: 30000 },
-        { icao: '76ceef', callsign: 'SIA346', lat: 46.96185, lon: 7.4529, track: 90, alt: 30000 },
-        { icao: '76ceef', callsign: 'SIA346', lat: 46.96185, lon: 7.4629, track: 90, alt: 30000 },
-        { icao: '76ceef', callsign: 'SIA346', lat: 46.96185, lon: 7.4729, track: 90, alt: 30000 },
-        { icao: '76ceef', callsign: 'SIA346', lat: 46.96185, lon: 7.4829, track: 90, alt: 30000 },
-      ],
-    };
-
     // Return specific flight path or default
-    return Promise.resolve(flightPaths[flightId] || this.pos);
+    return Promise.resolve(this.flightPaths[flightId] || this.pos);
   }
 
   registerPositionsCallback(callback: (positions: Map<string, TerrestialPosition>) => void): void {
@@ -400,4 +384,68 @@ export class FlightRadarServiceMock implements FlightRadarService {
     }
     return null;
   }
+
+  registerFlightPositionsCallback(flightId: string, callback: (positions: Array<TerrestialPosition>) => void): void {
+    this.disconnectFlightPositionsWebSocket(flightId);
+
+    this.getPositions(flightId).then((positions) => {
+      // Send initial data
+      callback(positions);
+
+      const intervalId = window.setInterval(() => {
+        const existingPositions = this.flightPaths[flightId] || this.pos;
+
+        // Modify positions slightly to simulate movement
+        const updatedPositions = existingPositions.map((pos) => ({
+          ...pos,
+          lat: pos.lat + (Math.random() * 0.002 - 0.001),
+          lon: pos.lon + (Math.random() * 0.002 - 0.001),
+          alt: pos.alt !== undefined ? pos.alt + Math.floor(Math.random() * 200 - 100) : undefined,
+        }));
+
+        if (Math.random() < 0.3) {
+          const lastPos = updatedPositions[updatedPositions.length - 1];
+          if (lastPos) {
+            updatedPositions.push({
+              ...lastPos,
+              lat: lastPos.lat + (Math.random() * 0.01 - 0.005),
+              lon: lastPos.lon + (Math.random() * 0.01 - 0.005),
+              alt: lastPos.alt !== undefined ? lastPos.alt + Math.floor(Math.random() * 300 - 100) : undefined,
+            });
+          }
+        }
+
+        this.flightPaths[flightId] = updatedPositions;
+
+        callback(updatedPositions);
+      }, 2000);
+
+      this.flightWsIntervals.set(flightId, intervalId);
+    });
+  }
+
+  disconnectFlightPositionsWebSocket(flightId: string): void {
+    const intervalId = this.flightWsIntervals.get(flightId);
+    if (intervalId !== undefined) {
+      window.clearInterval(intervalId);
+      this.flightWsIntervals.delete(flightId);
+    }
+  }
+
+  private flightPaths: Record<string, TerrestialPosition[]> = {
+    '123456': [
+      { icao: '4b1617', callsign: 'SWR756C', lat: 47.02075, lon: 7.33998, track: 45, alt: 35000 },
+      { icao: '4b1617', callsign: 'SWR756C', lat: 47.03075, lon: 7.34998, track: 45, alt: 35000 },
+      { icao: '4b1617', callsign: 'SWR756C', lat: 47.04075, lon: 7.35998, track: 45, alt: 35000 },
+      { icao: '4b1617', callsign: 'SWR756C', lat: 47.05075, lon: 7.36998, track: 45, alt: 35000 },
+      { icao: '4b1617', callsign: 'SWR756C', lat: 47.06075, lon: 7.37998, track: 45, alt: 35000 },
+    ],
+    '234567': [
+      { icao: '76ceef', callsign: 'SIA346', lat: 46.96185, lon: 7.4429, track: 90, alt: 30000 },
+      { icao: '76ceef', callsign: 'SIA346', lat: 46.96185, lon: 7.4529, track: 90, alt: 30000 },
+      { icao: '76ceef', callsign: 'SIA346', lat: 46.96185, lon: 7.4629, track: 90, alt: 30000 },
+      { icao: '76ceef', callsign: 'SIA346', lat: 46.96185, lon: 7.4729, track: 90, alt: 30000 },
+      { icao: '76ceef', callsign: 'SIA346', lat: 46.96185, lon: 7.4829, track: 90, alt: 30000 },
+    ],
+  };
 }

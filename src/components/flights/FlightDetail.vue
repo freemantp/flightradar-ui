@@ -47,6 +47,8 @@ const flight = ref<Flight>();
 const aircraft = ref<Aircraft>();
 const currentPosition = ref<TerrestialPosition | null>(null);
 let positionUpdateInterval: number | null = null;
+// Track active WebSocket connection
+let currentFlightId: string | null = null;
 
 const frService = inject('frService') as FlightRadarService;
 
@@ -54,56 +56,105 @@ watch(
   () => props.flightId,
   // eslint-disable-next-line
   async (newValue, oldValue) => {
+    // Clear current position when changing flights
+    currentPosition.value = null;
+
+    // Disconnect any existing WebSocket
+    if (currentFlightId) {
+      frService.disconnectFlightPositionsWebSocket(currentFlightId);
+      currentFlightId = null;
+    }
+
     if (newValue) {
+      // Reset references
+      flight.value = undefined;
+      aircraft.value = undefined;
+
+      // Fetch new flight data
       flight.value = await frService.getFlight(newValue);
       try {
         aircraft.value = await frService.getAircraft(flight.value.icao24);
+
+        // Set up WebSocket for position updates
+        currentFlightId = newValue;
+        setupPositionWebSocket(newValue);
+
+        // Get the current position (might be available immediately)
         updateCurrentPosition();
       } catch (err) {
         console.error(err);
         aircraft.value = undefined;
       }
-    } else {
-      currentPosition.value = null;
     }
   },
 );
 
 onMounted(() => {
-  // Get initial position data
+  // Get initial position data and set up WebSocket if needed
   if (props.flightId) {
     updateCurrentPosition();
+    if (!currentFlightId) {
+      currentFlightId = props.flightId;
+      setupPositionWebSocket(props.flightId);
+    }
   }
 
+  // Maintain the interval as a fallback, but make it less frequent
   positionUpdateInterval = window.setInterval(() => {
-    if (props.flightId) {
+    if (props.flightId && !currentPosition.value) {
       updateCurrentPosition();
     }
-  }, 2000); // Update every 2 seconds
+  }, 5000); // Fallback check every 5 seconds if no position is available
 });
 
 onBeforeUnmount(() => {
+  // Clean up interval
   if (positionUpdateInterval) {
     window.clearInterval(positionUpdateInterval);
     positionUpdateInterval = null;
   }
+
+  // Disconnect WebSocket
+  if (currentFlightId) {
+    frService.disconnectFlightPositionsWebSocket(currentFlightId);
+    currentFlightId = null;
+  }
 });
+
+// Set up WebSocket for position updates
+const setupPositionWebSocket = (flightId: string) => {
+  frService.registerFlightPositionsCallback(flightId, (positions: Array<TerrestialPosition>) => {
+    // Only update if this is still the selected flight
+    if (props.flightId === flightId && positions && positions.length > 0) {
+      // Always use the most recent position from the array
+      const latestPosition = positions[positions.length - 1];
+      if (latestPosition && latestPosition.alt !== undefined) {
+        currentPosition.value = latestPosition;
+      }
+    }
+  });
+};
 
 const updateCurrentPosition = async () => {
   if (!props.flightId) return;
 
-  try {
-    const livePosition = frService.getCurrentPosition(props.flightId);
+  const requestedFlightId = props.flightId;
 
-    if (livePosition && livePosition.alt !== undefined) {
+  try {
+    // First check if we have a live position from the main WebSocket
+    const livePosition = frService.getCurrentPosition(requestedFlightId);
+
+    // Only update if this is still the selected flight
+    if (props.flightId === requestedFlightId && livePosition && livePosition.alt !== undefined) {
       currentPosition.value = livePosition;
       return;
     }
 
     // Fallback: try to get historical positions if live data doesn't have altitude
-    const positions = await frService.getPositions(props.flightId);
+    const positions = await frService.getPositions(requestedFlightId);
 
-    if (positions && positions.length > 0) {
+    // Only update if this is still the selected flight (could have changed during the async call)
+    if (props.flightId === requestedFlightId && positions && positions.length > 0) {
       const latestPosition = positions[positions.length - 1];
 
       if (latestPosition && latestPosition.alt !== undefined) {

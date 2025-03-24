@@ -17,6 +17,8 @@ export class FlightRadarServiceImpl implements FlightRadarService {
   private positionsData: Map<string, TerrestialPosition & { lastUpdate: number }> = new Map();
   private positionsCleanupInterval: number | null = null;
 
+  private flightPositionsWebSockets: Map<string, WebSocket> = new Map();
+
   constructor() {
     const instance = Axios.create();
     this.axios = setupCache(instance);
@@ -296,6 +298,90 @@ export class FlightRadarServiceImpl implements FlightRadarService {
       });
     } else {
       throw new Error(res.statusText || 'Error retrieving flight positions');
+    }
+  }
+
+  public registerFlightPositionsCallback(flightId: string, callback: (positions: Array<TerrestialPosition>) => void): void {
+    this.disconnectFlightPositionsWebSocket(flightId);
+
+    const wsBaseUrl = this.getWebSocketBaseUrl();
+    const wsUrl = `${wsBaseUrl}api/v1/ws/flights/${flightId}/positions`;
+
+    console.log(`Connecting to flight position WebSocket: ${wsUrl}`);
+
+    try {
+      const ws = new WebSocket(wsUrl);
+      this.flightPositionsWebSockets.set(flightId, ws);
+
+      // Store positions for this flight
+      const flightPositions: TerrestialPosition[] = [];
+
+      ws.onopen = () => {
+        console.log(`WebSocket connection established for flight ${flightId}`);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+
+          if (data.type === 'initial' && data.positions && data.positions[flightId]) {
+            const positions = data.positions[flightId];
+            if (Array.isArray(positions)) {
+              flightPositions.length = 0;
+              positions.forEach((pos: TerrestialPosition) => {
+                flightPositions.push(pos);
+              });
+
+              callback([...flightPositions]);
+            }
+          } else if (data.type === 'update' && data.positions && data.positions[flightId]) {
+            const newPosition = data.positions[flightId];
+            if (newPosition) {
+              // Add to the end of the positions array
+              flightPositions.push(newPosition);
+
+              // Send all positions to the callback
+              callback([...flightPositions]);
+            }
+          }
+
+          console.debug(`Received position data for flight ${flightId}:`, data);
+        } catch (error) {
+          console.error(`Error processing WebSocket message for flight ${flightId}:`, error);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error(`WebSocket error for flight ${flightId}:`, error);
+        this.handleWebSocketFailure(error);
+      };
+
+      ws.onclose = (event) => {
+        console.log(`WebSocket connection closed for flight ${flightId}: ${event.code} ${event.reason}`);
+
+        if (this.flightPositionsWebSockets.get(flightId) === ws) {
+          this.flightPositionsWebSockets.delete(flightId);
+        }
+
+        if (event.code !== 1000) {
+          console.warn(`WebSocket connection for flight ${flightId} closed unexpectedly`);
+        }
+      };
+    } catch (error) {
+      console.error(`Error setting up WebSocket for flight ${flightId}:`, error);
+      this.handleWebSocketFailure(error);
+    }
+  }
+
+  public disconnectFlightPositionsWebSocket(flightId: string): void {
+    const ws = this.flightPositionsWebSockets.get(flightId);
+    if (ws) {
+      try {
+        ws.close();
+      } catch (error) {
+        console.error(`Error closing WebSocket for flight ${flightId}:`, error);
+      }
+      this.flightPositionsWebSockets.delete(flightId);
     }
   }
 

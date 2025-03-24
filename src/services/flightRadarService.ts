@@ -14,6 +14,9 @@ export interface FlightRadarService {
   registerPositionsCallback(callback: (positions: Map<string, TerrestialPosition>) => void): void;
   disconnectPositionsWebSocket(): void;
 
+  registerFlightPositionsCallback(flightId: string, callback: (positions: Array<TerrestialPosition>) => void): void;
+  disconnectFlightPositionsWebSocket(flightId: string): void;
+
   getCurrentPositions(): Map<string, TerrestialPosition>;
 
   getCurrentPosition(flightId: string): TerrestialPosition | null;
