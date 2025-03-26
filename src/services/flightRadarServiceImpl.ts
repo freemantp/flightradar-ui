@@ -89,7 +89,7 @@ export class FlightRadarServiceImpl implements FlightRadarService {
     );
   }
 
-  public getAircraft(icaoHexAddr: string): Observable<Aircraft | null> {
+  public getAircraft(icaoHexAddr: string): Observable<Aircraft> {
     return from(this.axios.get(`${this.apiBasepath}/aircraft/${icaoHexAddr}`, _.assign({}, this.oneHourCacheConfig, this.authConfig))).pipe(
       map((res) => {
         if (this.is2xx(res)) return res.data;
@@ -98,7 +98,7 @@ export class FlightRadarServiceImpl implements FlightRadarService {
       catchError((err) => {
         if (err.response && err.response.status === 404) {
           console.warn('Aircraft not found:', icaoHexAddr);
-          return of(null);
+          return of({} as Aircraft);
         } else {
           console.error('Error retrieving aircraft details:', err);
           throw err;

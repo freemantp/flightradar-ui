@@ -6,7 +6,7 @@ export interface FlightRadarService {
 
   getFlight(id: string): Observable<Flight>;
 
-  getAircraft(icaoHexAddr: string): Observable<Aircraft|null>;
+  getAircraft(icaoHexAddr: string): Observable<Aircraft>;
 
   // WebSocket methods for live position data
   observePositions(): Observable<Map<string, TerrestialPosition>>;

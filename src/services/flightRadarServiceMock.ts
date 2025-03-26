@@ -112,7 +112,7 @@ export class FlightRadarServiceMock implements FlightRadarService {
     ).pipe(delay(100));
   }
 
-  getAircraft(icaoHexAddr: string): Observable<Aircraft | null> {
+  getAircraft(icaoHexAddr: string): Observable<Aircraft> {
     // Mock aircraft data by ICAO address
     const aircraftMap: Record<string, Aircraft> = {
       '4b1617': {

@@ -32,14 +32,16 @@ const aircraft = ref<Aircraft>({ icao24: '' });
 
 onMounted(async () => {
   try {
-    aircraft.value = await frService.getAircraft(props.flight.icao24);
+    frService.getAircraft(props.flight.icao24).subscribe((ac) => {
+      aircraft.value = ac;
+    });
   } catch (err) {
-    console.debug(`Could not obtain details for ${props.flight.icao24}`);
+    //console.debug(`Could not obtain details for ${props.flight.icao24}`);
   }
 });
 
 const operatorTooltip = computed(() => {
-  let tooltipContent = `<strong>ICAO 24-bit: </strong> ${props.flight.icao24.toUpperCase()}<br/>`;
+  let tooltipContent = `<strong>ICAO 24-bit: </strong> ${props.flight?.icao24?.toUpperCase()}<br/>`;
   if (aircraft.value.reg) tooltipContent += `<strong>Registration:</strong> ${aircraft.value.reg}<br/>`;
   tooltipContent += `${timestampTooltip.value}`;
   return tooltipContent;

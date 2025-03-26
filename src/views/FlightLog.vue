@@ -29,7 +29,12 @@ const loadData = async () => {
   try {
     const limit = 100;
     const filter = militaryFilter.value ? 'mil' : undefined;
-    flights.value = await frService.getFlights(limit, filter);
+    frService.getFlights(limit, filter).subscribe({
+      next: (data) => {
+        flights.value = data;
+      },
+      error: (err) => console.error(err),
+    });
   } catch (err) {
     console.error('Could not recent flights:' + err);
     flights.value = [];
