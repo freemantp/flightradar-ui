@@ -232,15 +232,22 @@ const updateSelectedFlightPath = async () => {
   if (selectedFlight && !flightPositionCallbacks.has(selectedFlight.flightId)) {
     try {
       const flightId = selectedFlight.flightId;
-      const positions: TerrestialPosition[] = await radarService.getPositions(flightId);
-
-      // Only update if the selected flight hasn't changed during the async call
-      if (selectedFlight && selectedFlight.flightId === flightId && positions && positions.length > 0) {
-        selectedFlight.updateFlightPath(positions);
-      }
+      radarService.getPositions(flightId).subscribe({
+        next: (positions: TerrestialPosition[]) => {
+          // Only update if the selected flight hasn't changed during the async call
+          if (selectedFlight && selectedFlight.flightId === flightId && positions && positions.length > 0) {
+            selectedFlight.updateFlightPath(positions);
+          }
+        },
+        error: (error) => {
+          // Network error or API issue - silently handle the error
+          console.error('Error fetching flight positions:', error);
+          // Don't remove the flight path on update errors to maintain current state
+        }
+      });
     } catch (error) {
-      // Network error or API issue - silently handle the error
-      // Don't remove the flight path on update errors to maintain current state
+      // Handle any synchronous errors
+      console.error('Error setting up position subscription:', error);
     }
   }
 };
