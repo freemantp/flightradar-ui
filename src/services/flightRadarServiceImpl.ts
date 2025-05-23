@@ -212,6 +212,24 @@ export class FlightRadarServiceImpl implements FlightRadarService {
 
   public registerPositionsCallback(callback: (positions: Map<string, TerrestialPosition>) => void): void {
     if (!this.positionsWebSocket) {
+      console.warn('WebSocket not connected, attempting to reconnect...');
+      this.connectWebsocket();
+      
+      // Give the connection a moment to establish
+      setTimeout(() => {
+        if (!this.positionsWebSocket) {
+          throw new Error('WebSocket reconnection failed');
+        }
+        this.setupPositionsCallback(callback);
+      }, 1000);
+      return;
+    }
+
+    this.setupPositionsCallback(callback);
+  }
+
+  private setupPositionsCallback(callback: (positions: Map<string, TerrestialPosition>) => void): void {
+    if (!this.positionsWebSocket) {
       throw new Error('WebSocket not connected');
     }
 

@@ -28,6 +28,7 @@ const textTruncated = computed(() => {
 }
 
 .valueText {
+  text-align: left;
   font-size: 1em;
   position: absolute;
   top: 15px;

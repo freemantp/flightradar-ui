@@ -2,10 +2,10 @@
   <div class="container text-center">
     <div class="row">
       <div class="col">
-        <DetailField label="Callsign" :text="flight ? flight.cls : null" />
-      </div>
-      <div class="col">
         <DetailField label="Silhouette" :imageUrl="silhouetteUrl(aircraft && aircraft.icaoType ? aircraft.icaoType : '')" />
+      </div>      
+      <div class="col">
+        <DetailField label="Callsign" :text="flight ? flight.cls : null" />
       </div>
     </div>
     <div class="row">
@@ -18,7 +18,7 @@
     </div>
     <div class="row">
       <div class="col">
-        <DetailField :label="typeLabel" :text="aircraft ? aircraft.type : null" />
+        <DetailField label="Current Altitude" :text="currentAltitude" />
       </div>
       <div class="col">
         <DetailField label="Operator" :text="aircraft ? aircraft.op : null" />
@@ -26,7 +26,7 @@
     </div>
     <div class="row" v-if="currentAltitude">
       <div class="col">
-        <DetailField label="Current Altitude" :text="currentAltitude" />
+        <DetailField :label="typeLabel" :text="aircraft ? aircraft.type : null" />        
       </div>
     </div>
   </div>

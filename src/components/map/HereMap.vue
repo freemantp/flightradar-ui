@@ -64,11 +64,15 @@ onMounted(() => {
   initializeMap();
   map.setCenter({ lat: props.lat, lng: props.lng });
 
-  radarService.registerPositionsCallback((positions) => {
-    if (positions) {
-      updateAircaftPositions(positions);
-    }
-  });
+  try {
+    radarService.registerPositionsCallback((positions) => {
+      if (positions) {
+        updateAircaftPositions(positions);
+      }
+    });
+  } catch (error) {
+    console.error('Failed to register positions callback:', error);
+  }
 
   updateData();
 
