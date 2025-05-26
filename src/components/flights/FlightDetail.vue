@@ -1,19 +1,20 @@
 <template>
   <div class="container text-center">
+    <h1 class="title">{{ flight ? flight.cls : null }}</h1>
     <div class="row">
       <div class="col">
         <DetailField label="Silhouette" :imageUrl="silhouetteUrl(aircraft && aircraft.icaoType ? aircraft.icaoType : '')" />
-      </div>      
-      <div class="col">
-        <DetailField label="Callsign" :text="flight ? flight.cls : null" />
+      </div>
+      <div class="col" v-if="routeInfo">
+        <DetailField label="Route" :text="formattedRoute" />
       </div>
     </div>
     <div class="row">
       <div class="col">
-        <DetailField label="Registraton" :text="aircraft ? aircraft.reg : null" />
+        <DetailField label="24 bit address" :text="flight && flight.icao24 ? flight.icao24.toUpperCase() : null" />
       </div>
       <div class="col">
-        <DetailField label="24 bit address" :text="flight && flight.icao24 ? flight.icao24.toUpperCase() : null" />
+        <DetailField label="Registraton" :text="aircraft ? aircraft.reg : null" />
       </div>
     </div>
     <div class="row">
@@ -21,12 +22,17 @@
         <DetailField label="Current Altitude" :text="currentAltitude" />
       </div>
       <div class="col">
-        <DetailField label="Operator" :text="aircraft ? aircraft.op : null" />
+        <DetailField label="Ground Speed" :text="currentGroundSpeed" />
       </div>
     </div>
     <div class="row" v-if="currentAltitude">
       <div class="col">
-        <DetailField :label="typeLabel" :text="aircraft ? aircraft.type : null" />        
+        <DetailField :label="typeLabel" :text="aircraft ? aircraft.type : null" />
+      </div>
+    </div>
+    <div class="row" v-if="currentGroundSpeed">
+      <div class="col">
+        <DetailField label="Operator" :text="aircraft ? aircraft.op : null" />
       </div>
     </div>
   </div>
@@ -46,11 +52,25 @@ const props = defineProps({
 const flight = ref<Flight>();
 const aircraft = ref<Aircraft>();
 const currentPosition = ref<TerrestialPosition | null>(null);
+const routeInfo = ref<string | null>(null);
 let positionUpdateInterval: number | null = null;
 // Track active WebSocket connection
 let currentFlightId: string | null = null;
 
 const frService = inject('frService') as FlightRadarService;
+
+// Fetch route information using service
+const fetchRouteInfo = (callsign: string) => {
+  frService.getFlightRoute(callsign).subscribe({
+    next: (route) => {
+      routeInfo.value = route;
+    },
+    error: (error) => {
+      console.error('Error fetching route information:', error);
+      routeInfo.value = null;
+    },
+  });
+};
 
 // Set up WebSocket for position updates
 const setupPositionWebSocket = (flightId: string) => {
@@ -107,6 +127,7 @@ watch(
   (newValue, _oldValue) => {
     // Clear current position when changing flights
     currentPosition.value = null;
+    routeInfo.value = null;
 
     // Disconnect any existing WebSocket
     if (currentFlightId) {
@@ -123,6 +144,11 @@ watch(
       frService.getFlight(newValue).subscribe({
         next: (flightData) => {
           flight.value = flightData;
+
+          // Fetch route information if callsign is available
+          if (flightData && flightData.cls) {
+            fetchRouteInfo(flightData.cls);
+          }
 
           if (flightData && flightData.icao24) {
             // Once we have the flight, get the aircraft data
@@ -193,12 +219,32 @@ const currentAltitude = computed(() => {
   return undefined;
 });
 
+const currentGroundSpeed = computed(() => {
+  if (currentPosition?.value?.gs !== undefined && currentPosition.value.gs !== null && currentPosition.value.gs >= 0) {
+    return `${currentPosition.value.gs} kts`;
+  }
+
+  return undefined;
+});
+
 const typeLabel = computed(() => {
   return `Type (${aircraft.value?.icaoType ? aircraft.value.icaoType : 'Type'})`;
+});
+
+const formattedRoute = computed(() => {
+  if (routeInfo.value) {
+    return routeInfo.value.replace(/-/g, '➞');
+  }
+  return null;
 });
 </script>
 
 <style scoped>
+.title {
+  font-size: 2em;
+  text-align: left;
+}
+
 .categoryText {
   font-size: 0.6em;
   text-transform: uppercase;

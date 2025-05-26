@@ -9,6 +9,7 @@ import { map, catchError, finalize } from 'rxjs/operators';
 import _ from 'lodash';
 
 export class FlightRadarServiceImpl implements FlightRadarService {
+  private static readonly HEXDB_API_BASEPATH = 'https://hexdb.io/api/v1/';
   private authConfig: AxiosRequestConfig;
   private apiBasepath: string;
   private axios: AxiosCacheInstance;
@@ -103,6 +104,24 @@ export class FlightRadarServiceImpl implements FlightRadarService {
           console.error('Error retrieving aircraft details:', err);
           throw err;
         }
+      }),
+    );
+  }
+
+  public getFlightRoute(callsign: string): Observable<string | null> {
+    // TODO: Use plain axios cache interceptor (currently there's an issue with CORS and caching headers)
+    const plainAxios = Axios.create();
+    
+    return from(plainAxios.get(`${FlightRadarServiceImpl.HEXDB_API_BASEPATH}route/iata/${callsign}`)).pipe(
+      map((res) => {
+        if (this.is2xx(res) && res.data && res.data.route) {
+          return res.data.route;
+        }
+        return null;
+      }),
+      catchError((err) => {
+        console.error('Error retrieving flight route:', err);
+        return of(null);
       }),
     );
   }

@@ -1,8 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 import { FlightRadarService } from './flightRadarService';
-import { Observable, of, from, Subject, BehaviorSubject, ReplaySubject } from 'rxjs';
-import { map, delay, finalize } from 'rxjs/operators';
+import { Observable, of, BehaviorSubject, ReplaySubject } from 'rxjs';
+import { delay, finalize } from 'rxjs/operators';
 
 import { Aircraft, Flight, TerrestialPosition } from '@/model/backendModel';
 
@@ -149,6 +147,19 @@ export class FlightRadarServiceMock implements FlightRadarService {
           op: 'Mock Airlines',
         } as Aircraft),
     ).pipe(delay(100));
+  }
+
+  getFlightRoute(callsign: string): Observable<string | null> {
+    // Mock route data based on callsign
+    const mockRoutes: { [key: string]: string } = {
+      'SWR756C': 'ZUR-LHR',
+      'SIA346': 'SIN-CDG',
+      'EJU4319': 'GVA-BER',
+      'BAW123': 'LHR-JFK',
+      'KLM456': 'AMS-LAX',
+    };
+    
+    return of(mockRoutes[callsign] || null).pipe(delay(100));
   }
 
   getPositions(flightId: string): Observable<TerrestialPosition[]> {

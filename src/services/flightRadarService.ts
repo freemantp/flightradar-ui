@@ -25,4 +25,6 @@ export interface FlightRadarService {
   getCurrentPosition(flightId: string): TerrestialPosition | null;
 
   getPositions(flightId: string): Observable<Array<TerrestialPosition>>;
+
+  getFlightRoute(callsign: string): Observable<string | null>;
 }
