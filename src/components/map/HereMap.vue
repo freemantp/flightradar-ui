@@ -14,7 +14,7 @@ import { TerrestialPosition } from '@/model/backendModel';
 import { FlightRadarService } from '@/services/flightRadarService';
 import { AircraftIcon, AircraftMarker } from '@/components/map/aircraftElements';
 import { FlightPath, HereCoordinates } from '@/components/map/flightPath';
-import moment from 'moment';
+import { differenceInSeconds } from 'date-fns';
 import _ from 'lodash';
 
 const radarService = inject('frService') as FlightRadarService;
@@ -216,12 +216,11 @@ const updateAircaftPositions = (positions: Map<string, TerrestialPosition>) => {
     updateMarker(flightId, convertToHereCoords(pos, positions));
   });
 
-  const now = moment();
+  const now = new Date();
 
   // Purge stale markers
   for (let [key, value] of markers) {
-    let currentTimestamp = moment(value.lastUpdated);
-    if (now.diff(currentTimestamp, 'seconds') > 15) {
+    if (differenceInSeconds(now, value.lastUpdated) > 15) {
       removeMarker(key);
     }
   }

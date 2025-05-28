@@ -20,7 +20,7 @@ import { FlightRadarService } from '@/services/flightRadarService';
 import { silhouetteUrl } from '@/components/aircraftIcon';
 import { computed, inject, onMounted, ref, PropType } from 'vue';
 import _ from 'lodash';
-import moment from 'moment';
+import { differenceInMinutes, differenceInHours, startOfDay, format } from 'date-fns';
 
 const props = defineProps({
   flight: { type: Object as PropType<Flight>, required: true },
@@ -47,28 +47,29 @@ const operatorTooltip = computed(() => {
   return tooltipContent;
 });
 
-const getTimestampString = (timestamp: moment.Moment): string => {
-  const hoursSinceMidnight = moment().startOf('day').diff(timestamp, 'hours');
+const getTimestampString = (timestamp: Date): string => {
+  const now = new Date();
+  const hoursSinceMidnight = differenceInHours(startOfDay(now), timestamp);
   let timestmpStr = '';
 
   if (hoursSinceMidnight <= 0) {
-    const minutes = moment().diff(timestamp, 'minutes');
+    const minutes = differenceInMinutes(now, timestamp);
 
     if (isLive.value) {
       timestmpStr = minutes == 0 ? 'tracking' : `${minutes} minutes ago`;
-    } else timestmpStr = `Today, ${timestamp.format('HH:mm')}`;
+    } else timestmpStr = `Today, ${format(timestamp, 'HH:mm')}`;
   } else if (hoursSinceMidnight > 0 && hoursSinceMidnight < 24) {
-    timestmpStr = `Yesterday, ${timestamp.format('HH:mm')}`;
+    timestmpStr = `Yesterday, ${format(timestamp, 'HH:mm')}`;
   } else {
-    timestmpStr = timestamp.format('D.M.YYYY HH:mm');
+    timestmpStr = format(timestamp, 'd.M.yyyy HH:mm');
   }
 
   return timestmpStr;
 };
 
 const timestampTooltip = computed(() => {
-  const lastContact = moment(props.flight.lstCntct);
-  const firstContact = moment(props.flight.firstCntct);
+  const lastContact = new Date(props.flight.lstCntct);
+  const firstContact = new Date(props.flight.firstCntct);
 
   const lastContactStr: string = getTimestampString(lastContact);
   const firstContactStr: string = getTimestampString(firstContact);
@@ -82,8 +83,8 @@ const timestampTooltip = computed(() => {
 });
 
 const isLive = computed(() => {
-  const lastContact = moment(props.flight.lstCntct);
-  return moment().diff(lastContact, 'minutes') < 5;
+  const lastContact = new Date(props.flight.lstCntct);
+  return differenceInMinutes(new Date(), lastContact) < 5;
 });
 
 const aircaftOperatorTruncated = computed(() => {

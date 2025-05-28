@@ -15,9 +15,14 @@ export default defineConfig(({ mode }) => {
         '@': fileURLToPath(new URL('./src', import.meta.url))
       }
     },
-    // Define env variables to be used in the app
+    // Define only specific env variables needed by the app for security
     define: {
-      'process.env': env
+      'process.env.VUE_APP_FLIGHT_API_URL': JSON.stringify(env.VUE_APP_FLIGHT_API_URL),
+      'process.env.VUE_APP_FLIGHT_API_USERNAME': JSON.stringify(env.VUE_APP_FLIGHT_API_USERNAME), 
+      'process.env.VUE_APP_FLIGHT_API_PASSWORD': JSON.stringify(env.VUE_APP_FLIGHT_API_PASSWORD),
+      'process.env.VUE_APP_HERE_API_KEY': JSON.stringify(env.VUE_APP_HERE_API_KEY),
+      'process.env.VUE_APP_MOCK_DATA': JSON.stringify(env.VUE_APP_MOCK_DATA),
+      'process.env.NODE_ENV': JSON.stringify(env.NODE_ENV || mode)
     }
   }
 });

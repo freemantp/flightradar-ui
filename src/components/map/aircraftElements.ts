@@ -1,5 +1,4 @@
 // This file contains elements for aircraft visualization
-import moment from 'moment';
 import { HereCoordinates } from './flightPath';
 
 // Here Maps API interfaces
@@ -73,7 +72,7 @@ export class AircraftMarker {
   ) {
     this.marker = new H.map.DomMarker(coords, { icon: this.aircraftIcon.hereIcon, data: flightId });
     this.map.addObject(this.marker);
-    this.lastUpdate = moment().toDate();
+    this.lastUpdate = new Date();
   }
 
   public get hereMarker() {
@@ -94,7 +93,7 @@ export class AircraftMarker {
       }
     }
 
-    this.lastUpdate = moment().toDate();
+    this.lastUpdate = new Date();
   }
 
   public remove() {
