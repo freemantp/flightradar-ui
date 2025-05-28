@@ -7,7 +7,7 @@
       <FlightDetail :flightId="flightId" />
     </div>
   </div>
-  <HereMap
+  <MapComposition
     v-bind:apikey="apiKey"
     lat="46.8"
     lng="7.15"
@@ -23,7 +23,7 @@ import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { Configuration } from '@/config';
 import { Offcanvas } from 'bootstrap';
-import HereMap from '@/components/map/HereMap.vue';
+import MapComposition from '@/components/map/MapComposition.vue';
 import FlightDetail from '@/components/flights/FlightDetail.vue';
 
 const apiKey = Configuration.value('hereApiKey');

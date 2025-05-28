@@ -15,12 +15,10 @@
     </div>
   </div>
 
-  <HereMap
+  <MapComposition
     v-bind:apikey="apiKey"
     lat="46.8"
     lng="8.15"
-    width="100%"
-    height="1600px"
     :aerialOverview="true"
     :peridicallyRefresh="true"
     @on-marker-clicked="showFlightDetails($event)"
@@ -30,7 +28,7 @@
 
 <script setup lang="ts">
 import FlightDetail from '@/components/flights/FlightDetail.vue';
-import HereMap from '@/components/map/HereMap.vue';
+import MapComposition from '@/components/map/MapComposition.vue';
 import { Configuration } from '@/config';
 import { Offcanvas } from 'bootstrap';
 import { ref, onMounted } from 'vue';
