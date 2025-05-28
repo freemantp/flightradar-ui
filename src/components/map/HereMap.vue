@@ -14,12 +14,17 @@ import { TerrestialPosition } from '@/model/backendModel';
 import { FlightRadarService } from '@/services/flightRadarService';
 import { AircraftIcon, AircraftMarker } from '@/components/map/aircraftElements';
 import { FlightPath, HereCoordinates } from '@/components/map/flightPath';
-import { webSocketManager } from '@/composables/useWebSocketManager';
+import { useFlightStore, usePositionStore, useMapStore, useWebSocketStore } from '@/stores';
 import { differenceInSeconds } from 'date-fns';
 import _ from 'lodash';
 
 const radarService = inject('frService') as FlightRadarService;
-const wsManager = webSocketManager(radarService);
+
+// Pinia stores
+const flightStore = useFlightStore();
+const positionStore = usePositionStore();
+const mapStore = useMapStore();
+const webSocketStore = useWebSocketStore();
 
 const props = defineProps({
   apikey: String,
@@ -38,7 +43,7 @@ let map: any;
 let intervalId = ref<ReturnType<typeof setTimeout>>();
 
 let aircraftIcon: AircraftIcon;
-let selectedFlight: FlightPath | null;
+let selectedFlightPath: FlightPath | null;
 
 let markers: Map<string, AircraftMarker> = new Map();
 let iconSvgMap: Map<string, any> = new Map();
@@ -46,6 +51,13 @@ let iconSvgMap: Map<string, any> = new Map();
 declare let H: any;
 
 onBeforeMount(async () => {
+  // Initialize map store configuration
+  mapStore.setApiKey(props.apikey || '');
+  mapStore.updateConfig({
+    aerialOverview: props.aerialOverview || false,
+    periodicRefresh: props.peridicallyRefresh || false
+  });
+
   platform = new H.service.Platform({
     apikey: props.apikey,
   });
@@ -53,20 +65,75 @@ onBeforeMount(async () => {
   aircraftIcon = new AircraftIcon(iconSvgMap);
 });
 
+// Watch for props changes
 watch(
   () => props.highlightedFlightId,
-  () => {
-    if (props.highlightedFlightId) {
-      addFlightPath(props.highlightedFlightId);
+  (newFlightId) => {
+    if (newFlightId) {
+      mapStore.highlightFlight(newFlightId);
+      flightStore.selectFlight(newFlightId);
+      addFlightPath(newFlightId);
+    } else {
+      mapStore.clearHighlight();
+      flightStore.clearSelectedFlight();
     }
   },
 );
 
+// Watch for store-based flight selection changes
+watch(
+  () => flightStore.selectedFlightId,
+  (newFlightId, oldFlightId) => {
+    if (oldFlightId && oldFlightId !== newFlightId) {
+      // Clear previous selection
+      if (markers.has(oldFlightId)) {
+        markers.get(oldFlightId)?.setColor(AircraftIcon.INACTIVE_COLOR);
+      }
+    }
+    
+    if (newFlightId && newFlightId !== oldFlightId) {
+      // Highlight new selection
+      if (markers.has(newFlightId)) {
+        markers.get(newFlightId)?.setColor(AircraftIcon.HIGHLIGHT_COLOR);
+      }
+    }
+  },
+);
+
+// Watch for map center changes from store
+watch(
+  () => mapStore.center,
+  (newCenter) => {
+    if (map && mapStore.isInitialized) {
+      map.setCenter(newCenter);
+    }
+  },
+  { deep: true }
+);
+
+// Watch for map zoom changes from store
+watch(
+  () => mapStore.zoom,
+  (newZoom) => {
+    if (map && mapStore.isInitialized) {
+      map.setZoom(newZoom);
+    }
+  }
+);
+
 onMounted(() => {
   initializeMap();
-  map.setCenter({ lat: props.lat, lng: props.lng });
+  
+  // Set initial map center from props or store default
+  const initialCenter = {
+    lat: Number(props.lat) || mapStore.center.lat,
+    lng: Number(props.lng) || mapStore.center.lng
+  };
+  map.setCenter(initialCenter);
+  mapStore.setCenter(initialCenter);
+  mapStore.setInitialized(true);
 
-  wsManager.registerPositionsCallback((positions) => {
+  webSocketStore.registerPositionsWebSocket(radarService, (positions: Map<string, TerrestialPosition>) => {
     if (positions) {
       updateAircaftPositions(positions);
     }
@@ -76,29 +143,43 @@ onMounted(() => {
 
   if (props.peridicallyRefresh) {
     intervalId.value = setInterval(() => {
-      if (props.highlightedFlightId || !_.isNull(selectedFlight)) {
+      if (props.highlightedFlightId || !_.isNull(selectedFlightPath)) {
         updateSelectedFlightPath();
       }
-    }, 1000);
+    }, mapStore.config.refreshInterval);
   } else {
     if (intervalId.value) clearInterval(intervalId.value);
   }
 });
 
 const updateData = () => {
-  if (props.aerialOverview) {
+  if (mapStore.isAerialViewEnabled) {
     loadLivePositions();
   }
-  if (props.highlightedFlightId || !_.isNull(selectedFlight)) {
+  if (mapStore.highlightedFlightId || !_.isNull(selectedFlightPath)) {
     updateSelectedFlightPath();
   }
 };
 
 onBeforeUnmount(async () => {
   if (intervalId.value) clearInterval(intervalId.value);
+  
+  // Clean up WebSocket connections via store
+  webSocketStore.disconnectAllWebSockets(radarService);
+  
+  // Reset map store state
+  mapStore.setInitialized(false);
 });
 
 const loadLivePositions = async () => {
+  // Try to get positions from store first
+  const storePositions = positionStore.getCurrentPositions;
+  if (storePositions.size > 0) {
+    updateAircaftPositions(storePositions);
+    return;
+  }
+  
+  // Fallback to service if store is empty
   const positions = radarService.getCurrentPositions();
   if (positions && positions.size > 0) {
     updateAircaftPositions(positions);
@@ -106,25 +187,29 @@ const loadLivePositions = async () => {
 };
 
 const resetIcon = () => {
-  if (selectedFlight && markers.has(selectedFlight.flightId)) {
-    markers.get(selectedFlight.flightId)?.setColor(AircraftIcon.INACTIVE_COLOR);
+  if (selectedFlightPath && markers.has(selectedFlightPath.flightId)) {
+    markers.get(selectedFlightPath.flightId)?.setColor(AircraftIcon.INACTIVE_COLOR);
   }
 };
 
 const unselectFlight = () => {
   resetIcon();
 
-  if (selectedFlight) {
-    const flightId = selectedFlight.flightId;
+  if (selectedFlightPath) {
+    const flightId = selectedFlightPath.flightId;
     
     // Disconnect from WebSocket if connected
-    if (wsManager.isFlightConnected(flightId)) {
-      wsManager.disconnectFlightPositionsWebSocket(flightId);
+    if (webSocketStore.isFlightConnected(flightId)) {
+      webSocketStore.disconnectFlightPositionsWebSocket(radarService, flightId);
     }
     
-    const flightToRemove = selectedFlight;
-    selectedFlight = null; // Clear the reference first to prevent recursive cleanup
+    const flightToRemove = selectedFlightPath;
+    selectedFlightPath = null; // Clear the reference first to prevent recursive cleanup
     flightToRemove.removeFlightPath();
+    
+    // Update stores
+    mapStore.clearHighlight();
+    flightStore.clearSelectedFlight();
   }
 };
 
@@ -132,7 +217,7 @@ const removeMarker = (id: string) => {
   let marker = markers.get(id);
 
   if (marker) {
-    if (selectedFlight && selectedFlight.flightId === id) {
+    if (selectedFlightPath && selectedFlightPath.flightId === id) {
       unselectFlight();
     }
 
@@ -202,6 +287,9 @@ const convertToHereCoords = (flPos: TerrestialPosition, positions?: Map<string, 
 };
 
 const updateAircaftPositions = (positions: Map<string, TerrestialPosition>) => {
+  // Update position store
+  positionStore.updatePositions(positions);
+  
   positions.forEach((pos: TerrestialPosition, flightId: string) => {
     updateMarker(flightId, convertToHereCoords(pos, positions));
   });
@@ -210,24 +298,27 @@ const updateAircaftPositions = (positions: Map<string, TerrestialPosition>) => {
 
   // Purge stale markers
   for (let [key, value] of markers) {
-    if (differenceInSeconds(now, value.lastUpdated) > 15) {
+    if (differenceInSeconds(now, value.lastUpdated) > positionStore.staleThreshold) {
       removeMarker(key);
     }
   }
+  
+  // Also purge stale positions from store
+  positionStore.purgeStalePositions();
 };
 
 
 const updateSelectedFlightPath = async () => {
   // This function is kept for compatibility with the interval-based approach
   // but it's not actively used for WebSocket-connected flights
-  if (selectedFlight && !wsManager.isFlightConnected(selectedFlight.flightId)) {
+  if (selectedFlightPath && !webSocketStore.isFlightConnected(selectedFlightPath.flightId)) {
     try {
-      const flightId = selectedFlight.flightId;
+      const flightId = selectedFlightPath.flightId;
       radarService.getPositions(flightId).subscribe({
         next: (positions: TerrestialPosition[]) => {
           // Only update if the selected flight hasn't changed during the async call
-          if (selectedFlight && selectedFlight.flightId === flightId && positions && positions.length > 0) {
-            selectedFlight.updateFlightPath(positions);
+          if (selectedFlightPath && selectedFlightPath.flightId === flightId && positions && positions.length > 0) {
+            selectedFlightPath.updateFlightPath(positions);
           }
         },
         error: (error) => {
@@ -256,10 +347,10 @@ const updateMarker = (id: string, coords: HereCoordinates) => {
 
 const addFlightPath = async (flightId: string) => {
   try {
-    const previousFlight = selectedFlight;
+    const previousFlight = selectedFlightPath;
     if (previousFlight && previousFlight.flightId !== flightId) {
-      if (wsManager.isFlightConnected(previousFlight.flightId)) {
-        wsManager.disconnectFlightPositionsWebSocket(previousFlight.flightId);
+      if (webSocketStore.isFlightConnected(previousFlight.flightId)) {
+        webSocketStore.disconnectFlightPositionsWebSocket(radarService, previousFlight.flightId);
       }
       
       if (markers.has(previousFlight.flightId)) {
@@ -268,7 +359,7 @@ const addFlightPath = async (flightId: string) => {
     }
 
     // Create the new flight path object before cleaning up the old one
-    selectedFlight = new FlightPath(flightId, map);
+    selectedFlightPath = new FlightPath(flightId, map);
 
     // Clean up previous flight path AFTER creating the new one to avoid duplicate cleanup
     if (previousFlight) {
@@ -282,20 +373,24 @@ const addFlightPath = async (flightId: string) => {
 
     const positionsCallback = (positions: TerrestialPosition[]) => {
       // Only update if this is still the selected flight
-      if (selectedFlight && selectedFlight.flightId === flightId && positions && positions.length > 0) {
-        selectedFlight.updateFlightPath(positions);
+      if (selectedFlightPath && selectedFlightPath.flightId === flightId && positions && positions.length > 0) {
+        selectedFlightPath.updateFlightPath(positions);
       }
     };
     
-    wsManager.registerFlightPositionsCallback(flightId, positionsCallback);
+    webSocketStore.registerFlightPositionsWebSocket(radarService, flightId, positionsCallback);
+    
+    // Update stores
+    mapStore.highlightFlight(flightId);
+    flightStore.selectFlight(flightId);
     
     // Initial positions will come through the WebSocket
   } catch (error) {
     console.error('Error setting up flight path:', error);
     // If there's an error, clean up current selection
-    if (selectedFlight && selectedFlight.flightId === flightId) {
-      const flightToRemove = selectedFlight;
-      selectedFlight = null;
+    if (selectedFlightPath && selectedFlightPath.flightId === flightId) {
+      const flightToRemove = selectedFlightPath;
+      selectedFlightPath = null;
       flightToRemove.removeFlightPath();
 
       // Also reset the marker color since selection failed
@@ -303,9 +398,13 @@ const addFlightPath = async (flightId: string) => {
         markers.get(flightId)?.setColor(AircraftIcon.INACTIVE_COLOR);
       }
       
-      if (wsManager.isFlightConnected(flightId)) {
-        wsManager.disconnectFlightPositionsWebSocket(flightId);
+      if (webSocketStore.isFlightConnected(flightId)) {
+        webSocketStore.disconnectFlightPositionsWebSocket(radarService, flightId);
       }
+      
+      // Clear stores
+      mapStore.clearHighlight();
+      flightStore.clearSelectedFlight();
     }
   }
 };
@@ -316,44 +415,67 @@ const emitFlightId = (flightId: string) => {
 
 const selectFlight = (flightId: string) => {
   // Reset color of previously selected aircraft if it exists and it's not the same as the newly selected one
-  if (selectedFlight && selectedFlight.flightId !== flightId && markers.has(selectedFlight.flightId)) {
-    markers.get(selectedFlight.flightId)?.setColor(AircraftIcon.INACTIVE_COLOR);
+  if (selectedFlightPath && selectedFlightPath.flightId !== flightId && markers.has(selectedFlightPath.flightId)) {
+    markers.get(selectedFlightPath.flightId)?.setColor(AircraftIcon.INACTIVE_COLOR);
   }
 
   if (markers.has(flightId)) {
     markers.get(flightId)?.setColor(AircraftIcon.HIGHLIGHT_COLOR);
   }
 
+  // Update stores
+  mapStore.selectMarker(flightId);
+  flightStore.selectFlight(flightId);
+  mapStore.highlightFlight(flightId);
+
   addFlightPath(flightId);
   emitFlightId(flightId);
 };
 
 const initializeMap = () => {
-  let defaultLayers = platform.createDefaultLayers();
+  mapStore.setLoading(true);
+  
+  try {
+    let defaultLayers = platform.createDefaultLayers();
 
-  const mapContainer = document.getElementById('mapContainer');
+    const mapContainer = document.getElementById('mapContainer');
 
-  // Instantiate (and display) a map object:
-  map = new H.Map(mapContainer, defaultLayers.vector.normal.map, {
-    center: { lat: props.lat, lng: props.lng },
-    zoom: 8,
-    pixelRatio: window.devicePixelRatio || 1,
-  });
+    // Instantiate (and display) a map object:
+    map = new H.Map(mapContainer, defaultLayers.vector.normal.map, {
+      center: { lat: Number(props.lat) || mapStore.center.lat, lng: Number(props.lng) || mapStore.center.lng },
+      zoom: mapStore.zoom,
+      pixelRatio: window.devicePixelRatio || 1,
+    });
 
-  // provided that map was instantiated with the vector layer as a base layer
-  let baseLayer = map.getBaseLayer();
-  baseLayer.getProvider().setStyle(new H.map.Style('/radar-style.yml'));
+    // provided that map was instantiated with the vector layer as a base layer
+    let baseLayer = map.getBaseLayer();
+    baseLayer.getProvider().setStyle(new H.map.Style(mapStore.config.styleUrl || '/radar-style.yml'));
 
-  window.addEventListener('resize', () => {
-    map.getViewPort().resize();
-  });
-  // eslint-disable-next-line
-  const behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
-  // eslint-disable-next-line
-  const ui = H.ui.UI.createDefault(map, defaultLayers);
+    window.addEventListener('resize', () => {
+      map.getViewPort().resize();
+    });
+    
+    // Map events and behaviors
+    new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
+    H.ui.UI.createDefault(map, defaultLayers);
+    
+    mapStore.setLoading(false);
+    mapStore.clearError();
+  } catch (error) {
+    console.error('Error initializing map:', error);
+    mapStore.setError(error as Error);
+    mapStore.setLoading(false);
+  }
 };
 
-defineExpose({ unselectFlight });
+defineExpose({ 
+  unselectFlight,
+  // Expose store access for parent components
+  flightStore,
+  positionStore,
+  mapStore,
+  webSocketStore
+});
 </script>
 
 <style scoped></style>

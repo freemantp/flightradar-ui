@@ -1,4 +1,5 @@
 import { createApp } from 'vue';
+import { createPinia } from 'pinia';
 import App from './App.vue';
 import router from './router';
 import { FlightRadarService } from './services/flightRadarService';
@@ -25,9 +26,10 @@ const frService = baseService;
 
 // Create the Vue app
 const app = createApp(App);
+const pinia = createPinia();
 
 // Register the flight radar service as a global dependency
 app.provide('frService', frService);
 
 // Mount the app
-app.use(router).mount('#app');
+app.use(pinia).use(router).mount('#app');
