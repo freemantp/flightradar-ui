@@ -14,10 +14,12 @@ import { TerrestialPosition } from '@/model/backendModel';
 import { FlightRadarService } from '@/services/flightRadarService';
 import { AircraftIcon, AircraftMarker } from '@/components/map/aircraftElements';
 import { FlightPath, HereCoordinates } from '@/components/map/flightPath';
+import { webSocketManager } from '@/composables/useWebSocketManager';
 import { differenceInSeconds } from 'date-fns';
 import _ from 'lodash';
 
 const radarService = inject('frService') as FlightRadarService;
+const wsManager = webSocketManager(radarService);
 
 const props = defineProps({
   apikey: String,
@@ -64,15 +66,11 @@ onMounted(() => {
   initializeMap();
   map.setCenter({ lat: props.lat, lng: props.lng });
 
-  try {
-    radarService.registerPositionsCallback((positions) => {
-      if (positions) {
-        updateAircaftPositions(positions);
-      }
-    });
-  } catch (error) {
-    console.error('Failed to register positions callback:', error);
-  }
+  wsManager.registerPositionsCallback((positions) => {
+    if (positions) {
+      updateAircaftPositions(positions);
+    }
+  });
 
   updateData();
 
@@ -98,13 +96,6 @@ const updateData = () => {
 
 onBeforeUnmount(async () => {
   if (intervalId.value) clearInterval(intervalId.value);
-  
-  radarService.disconnectPositionsWebSocket();
-  
-  for (const flightId of flightPositionCallbacks.keys()) {
-    radarService.disconnectFlightPositionsWebSocket(flightId);
-  }
-  flightPositionCallbacks.clear();
 });
 
 const loadLivePositions = async () => {
@@ -127,9 +118,8 @@ const unselectFlight = () => {
     const flightId = selectedFlight.flightId;
     
     // Disconnect from WebSocket if connected
-    if (flightPositionCallbacks.has(flightId)) {
-      radarService.disconnectFlightPositionsWebSocket(flightId);
-      flightPositionCallbacks.delete(flightId);
+    if (wsManager.isFlightConnected(flightId)) {
+      wsManager.disconnectFlightPositionsWebSocket(flightId);
     }
     
     const flightToRemove = selectedFlight;
@@ -226,13 +216,11 @@ const updateAircaftPositions = (positions: Map<string, TerrestialPosition>) => {
   }
 };
 
-// Map to store flight position callbacks
-const flightPositionCallbacks = new Map<string, (positions: TerrestialPosition[]) => void>();
 
 const updateSelectedFlightPath = async () => {
   // This function is kept for compatibility with the interval-based approach
   // but it's not actively used for WebSocket-connected flights
-  if (selectedFlight && !flightPositionCallbacks.has(selectedFlight.flightId)) {
+  if (selectedFlight && !wsManager.isFlightConnected(selectedFlight.flightId)) {
     try {
       const flightId = selectedFlight.flightId;
       radarService.getPositions(flightId).subscribe({
@@ -270,9 +258,8 @@ const addFlightPath = async (flightId: string) => {
   try {
     const previousFlight = selectedFlight;
     if (previousFlight && previousFlight.flightId !== flightId) {
-      if (flightPositionCallbacks.has(previousFlight.flightId)) {
-        radarService.disconnectFlightPositionsWebSocket(previousFlight.flightId);
-        flightPositionCallbacks.delete(previousFlight.flightId);
+      if (wsManager.isFlightConnected(previousFlight.flightId)) {
+        wsManager.disconnectFlightPositionsWebSocket(previousFlight.flightId);
       }
       
       if (markers.has(previousFlight.flightId)) {
@@ -300,8 +287,7 @@ const addFlightPath = async (flightId: string) => {
       }
     };
     
-    flightPositionCallbacks.set(flightId, positionsCallback);
-    radarService.registerFlightPositionsCallback(flightId, positionsCallback);
+    wsManager.registerFlightPositionsCallback(flightId, positionsCallback);
     
     // Initial positions will come through the WebSocket
   } catch (error) {
@@ -317,9 +303,8 @@ const addFlightPath = async (flightId: string) => {
         markers.get(flightId)?.setColor(AircraftIcon.INACTIVE_COLOR);
       }
       
-      if (flightPositionCallbacks.has(flightId)) {
-        radarService.disconnectFlightPositionsWebSocket(flightId);
-        flightPositionCallbacks.delete(flightId);
+      if (wsManager.isFlightConnected(flightId)) {
+        wsManager.disconnectFlightPositionsWebSocket(flightId);
       }
     }
   }
